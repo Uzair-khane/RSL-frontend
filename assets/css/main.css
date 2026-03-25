@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Manrope";
+  src: url(/fonts/Manrope.ttf);
+  font-display: swap;
+}
+@font-face {
+  font-family: "Outfit";
+  src: url(/fonts/Outfit.ttf);
+  font-display: swap;
+}
+
+body {
+  font-family: "Manrope";
+}

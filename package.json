@@ -1,0 +1,29 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "start": "nuxt start"
+  },
+  "dependencies": {
+    "@vuepic/vue-datepicker": "^10.0.0",
+    "flatpickr": "^4.6.13",
+    "nuxt": "^3.14.159",
+    "nuxt-aos": "^1.2.5",
+    "nuxt-swiper": "^1.2.2",
+    "vite": "^5.4.10",
+    "vue": "latest",
+    "vue-flatpickr-component": "^11.0.5",
+    "vue-router": "latest",
+    "vue3-google-map": "^0.21.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14"
+  }
+}
