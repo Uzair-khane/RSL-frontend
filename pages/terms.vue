@@ -1,101 +1,100 @@
 <template>
   <div>
-    <HeroSection
-      title="terms and conditions"
-      :imagePath="'/images/terms.png'"
-    />
+    <HeroSection title="Terms and Conditions" :imagePath="'/images/terms.png'" />
     <div class="px-3 md:px-16 py-10">
-      <p>
-        Welcome to Real Smart Limousine (“we,” “our,” or “us”). By accessing or
-        using our website and services, you agree to comply with the following
-        Terms and Conditions. Please read them carefully before using our
-        services..
+      <p class="text-gray-700 leading-relaxed">
+        Welcome to Real Smart Limousine (RSL). By accessing or using our platform,
+        you agree to comply with the following Terms and Conditions. These terms
+        govern your relationship with RSL regarding ride bookings, payments, and safety.
       </p>
-      <div
-        class="mt-6"
-        v-for="(data, index) in termsAndConditions"
-        :key="index"
-      >
-        <h3 class="text-xl font-semibold">
+
+      <div class="mt-8" v-for="(data, index) in termsAndConditions" :key="index">
+        <h3 class="text-xl font-semibold text-gray-900">
           {{ index + 1 }}. {{ data.section }}
         </h3>
-        <p class="mt-3">{{ data.description }}</p>
+        <p class="mt-3 text-gray-600 leading-relaxed">{{ data.description }}</p>
       </div>
-      <div class="mt-6">
-        <h2 class="text-blue-600 font-semibold">REAL SMART LIMOUSINE</h2>
-        <ul>
-          <li class="flex gap-2 mt-4 items-center">
-            <iconPhone class="w-4 h-4 fill-black stroke-black" />
-            <span> (+971) 4- 552-0932 </span>
+
+      <div class="mt-10 p-6 bg-gray-50 rounded-xl border border-gray-100">
+        <h2 class="text-blue-600 font-bold text-lg uppercase tracking-wider">Real Smart Limousine</h2>
+        <ul class="mt-4 space-y-3">
+          <li class="flex gap-3 items-center">
+            <iconPhone class="w-5 h-5 fill-black" />
+            <span class="text-gray-700"> (+92) 91-XXXXXXX </span>
           </li>
-          <li class="flex gap-2 mt-4 items-center">
-            <iconMobile class="w-4 h-4 fill-black stroke-black" />
-            <span> (+971) 50- 187-6887 </span>
+          <li class="flex gap-3 items-center">
+            <iconMobile class="w-5 h-5 fill-black" />
+            <span class="text-gray-700"> 0314-9535884 </span>
           </li>
-          <li class="flex gap-2 mt-4 items-center">
-            <iconMail class="w-4 h-4 fill-black stroke-white" />
-            <span> info@realsmartlimousine.com </span>
+          <li class="flex gap-3 items-center">
+            <iconMail class="w-5 h-5 fill-black" />
+            <span class="text-gray-700"> info@realsmartlimousine.com </span>
+          </li>
+          <li class="flex gap-3 items-start">
+            <iconLocation class="w-5 h-5 fill-black mt-1" />
+            <span class="text-gray-700"> Office 604, City Tower, Main University Road, Peshawar, Pakistan </span>
           </li>
         </ul>
-        <p class="mt-10">
-          By using our Site and services, you acknowledge that you have read,
-          understood, and agreed to these Terms and Conditions.
+        <p class="mt-10 text-sm text-gray-500 italic">
+          By using our site and services, you acknowledge that you have read,
+          understood, and agreed to these Terms and Conditions. Last updated: April 2026.
         </p>
       </div>
     </div>
   </div>
 </template>
+
 <script setup>
 const termsAndConditions = [
   {
-    section: "Use of Services",
+    section: "Service Eligibility",
     description:
-      "Our services are intended for lawful purposes only. By using our Site and booking our services, you agree not to engage in any activity that violates applicable laws or regulations or harms our reputation.",
+      "RSL provides a luxury transport platform. Users must provide valid identification for registration. Drivers must undergo a full background check, including CNIC and license verification, before being authorized to provide services.",
   },
   {
-    section: "Booking and Payments",
+    section: "Booking and Fixed Pricing",
     description:
-      "All bookings must be made through the designated channels on our Site. Payments are required as per the terms outlined during the booking process. Failure to provide accurate payment information may result in cancellation of your reservation.",
+      "All bookings are subject to availability. RSL provides a 'Fixed Fare Estimation' before confirmation. Once a ride is booked, the fare remains fixed unless the destination is changed or additional stops are added during the journey.",
   },
   {
-    section: "Cancellations and Refunds",
+    section: "Payment Terms",
     description:
-      "Cancellations must be made in accordance with our cancellation policy. Refunds will be processed as outlined in the booking confirmation. Late cancellations or no-shows may be subject to additional charges.",
+      "Payments are processed securely via Stripe or PayPal. By booking, you authorize RSL to charge the estimated amount. Invoices are generated automatically and can be downloaded as PDFs within the application.",
   },
   {
-    section: "User Responsibilities",
+    section: "Cancellation and Refund Policy",
     description:
-      "You are responsible for providing accurate and complete information during the booking process. Failure to do so may result in delays, cancellations, or additional fees.",
+      "Cancellations made within the free window incur no charges. Late cancellations will be subject to a penalty fee as defined in the app. If a vehicle breakdown occurs, a backup driver is dispatched, and a partial refund is automatically processed.",
   },
   {
-    section: "Limitation of Liability",
+    section: "Safety and Conduct",
     description:
-      "We strive to ensure a safe and reliable service; however, we are not liable for delays, damages, or losses caused by factors beyond our control, including but not limited to traffic, weather, or third-party actions.",
+      "Safety is our top priority. Users have access to SOS buttons and fake call features. RSL reserves the right to suspend any account involved in misconduct, harassment, or illegal activities during a ride.",
+  },
+  {
+    section: "Route Optimization",
+    description:
+      "Our AI-powered system optimizes routes for efficiency. While we strive for accuracy in ETAs, RSL is not liable for delays caused by extreme traffic, weather, or road closures beyond our control.",
   },
   {
     section: "Intellectual Property",
     description:
-      "All content on our Site, including text, images, and logos, is the property of Real Smart Limousine. Unauthorized use, reproduction, or distribution of this content is strictly prohibited.",
+      "The 'RSL' brand, logo, and the 'Zilber' backend architecture are the exclusive property of Real Smart Limousine. Unauthorized use or reproduction of our software or content is strictly prohibited.",
   },
   {
-    section: "Privacy Policy",
+    section: "Data Privacy",
     description:
-      "Your use of the Site is also governed by our Privacy Policy, which outlines how we collect, use, and protect your personal information. Please visit Privacy Policy.",
-  },
-  {
-    section: "Changes to Terms",
-    description:
-      "We reserve the right to update these Terms and Conditions at any time without prior notice. Continued use of our Site and services signifies your acceptance of the updated terms.",
+      "Your use of RSL is also governed by our Privacy Policy. We collect real-time location data only to facilitate tracking and emergency response features.",
   },
   {
     section: "Governing Law",
     description:
-      "These Terms and Conditions are governed by the laws of United Arab Emirates. Any disputes arising from the use of our services will be subject to the exclusive jurisdiction of the courts in that jurisdiction.",
+      "These Terms and Conditions are governed by the laws of Pakistan. Any disputes arising from the use of our services will be subject to the jurisdiction of the courts in Peshawar.",
   },
   {
-    section: "Contact Us",
+    section: "Modifications",
     description:
-      "If you have any questions or concerns about this Privacy Policy or our data practices, please get in touch with us.",
+      "RSL reserves the right to update these terms at any time. Continued use of the platform after changes are posted signifies your acceptance of the revised Terms and Conditions.",
   },
 ];
 </script>

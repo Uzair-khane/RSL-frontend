@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="mt-14 md:px-16 px-3 text-white service-banner md:px-16 py-10 md:py-24"
-  >
+  <div class="mt-14 md:px-16 px-3 text-white service-banner md:px-16 py-10 md:py-24">
     <div>
       <div class="flex gap-2 md:gap-4 justify-center items-center">
         <hr class="w-10 md:w-20 border border-white" />
@@ -14,27 +12,16 @@
         On-time, reliable, and stress-free limousine services
       </p>
     </div>
-    <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-8 md:mt-20 gap-10 md:gap-20"
-    >
-      <div
-        v-for="(service, index) in services"
-        :key="index"
-        data-aos="fade-up"
-        :data-aos-delay="index * 50"
-        class="flex gap-3"
-      >
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-8 md:mt-20 gap-10 md:gap-20">
+      <div v-for="(service, index) in services" :key="index" data-aos="fade-up" :data-aos-delay="index * 50"
+        class="flex gap-3">
         <div>
           <!-- Render the icon component dynamically -->
-          <component
-            :is="service.icon"
-            :class="[
-              service.type == 'icon-time'
-                ? 'fill-none stroke-white'
-                : 'stroke-white fill-white',
-            ]"
-            class="w-7 h-7"
-          />
+          <component :is="service.icon" :class="[
+            service.type == 'icon-time'
+              ? 'fill-none stroke-white'
+              : 'stroke-white fill-white',
+          ]" class="w-7 h-7" />
         </div>
         <div>
           <h1 class="uppercase font-outfit font-semibold text-lg">
@@ -95,7 +82,7 @@ const services = [
     icon: IconAeroplane,
     title: "Airport Transfers",
     description:
-      "RSL specializes in providing chauffeur-driven Luxury Airport Transportation in Dubai to all corporate & leisure travelers.",
+      "RSL specializes in providing chauffeur-driven Luxury Airport Transportation in Pakistan to all corporate & leisure travelers.",
   },
 ];
 </script>

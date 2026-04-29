@@ -1,25 +1,15 @@
 <template>
-  <div
-    class="md:px-16 py-10 md:py-20 px-3 text-slate-900 services md:px-16 py-10 md:py-16"
-  >
+  <div class="md:px-16 py-10 md:py-20 px-3 text-slate-900 services md:px-16 py-10 md:py-16">
     <div class="space-y-5 services-hover">
-      <div
-        v-for="(service, index) in services"
-        data-aos="fade-up"
-        :key="index"
-        class="flex gap-3 group py-6 px-4 rounded-md hover:text-white"
-      >
+      <div v-for="(service, index) in services" data-aos="fade-up" :key="index"
+        class="flex gap-3 group py-6 px-4 rounded-md hover:text-white">
         <div>
           <!-- Render the icon component dynamically -->
-          <component
-            :is="service.icon"
-            :class="[
-              service.type == 'icon-time'
-                ? 'fill-none stroke-slate-900 group-hover:stroke-white'
-                : 'fill-slate-900  group-hover:fill-white group-hover:stroke-white stroke-slate-900',
-            ]"
-            class="w-7 h-7"
-          />
+          <component :is="service.icon" :class="[
+            service.type == 'icon-time'
+              ? 'fill-none stroke-slate-900 group-hover:stroke-white'
+              : 'fill-slate-900  group-hover:fill-white group-hover:stroke-white stroke-slate-900',
+          ]" class="w-7 h-7" />
         </div>
         <div>
           <h1 class="uppercase font-bold font-outfit text-lg">
@@ -85,7 +75,7 @@ const services = [
   {
     icon: IconAeroplane,
     title: "Airport Transfers",
-    description: `Real Smart Limousine specialize in providing chauffeur driven Luxury Airport Transportation in Dubai to all corporate and leisure travelers. We provide reliable Airport Limo services for all your Airport transportation needs. We have been trusted for delivering Professional, Dependable and Discreet chauffeur driven airport transportation services. We always ensure that your journey from airport to your destination or vice versa, is always pleasurable and safe.`,
+    description: `Real Smart Limousine specialize in providing chauffeur driven Luxury Airport Transportation in pakistan to all corporate and leisure travelers. We provide reliable Airport Limo services for all your Airport transportation needs. We have been trusted for delivering Professional, Dependable and Discreet chauffeur driven airport transportation services. We always ensure that your journey from airport to your destination or vice versa, is always pleasurable and safe.`,
   },
 ];
 </script>
@@ -95,7 +85,8 @@ const services = [
   background: url("/images/list-services.bg.png") center no-repeat;
   background-size: cover;
 }
-.services-hover > div:hover {
+
+.services-hover>div:hover {
   cursor: default;
   background-image: url("/images/services-hover.png");
 }
