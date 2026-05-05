@@ -138,7 +138,7 @@ function selectHours() {
 }
 
 const googleMap = ref(null);
-const mapCenter = ref({ lat: 25.2048, lng: 55.2708 });
+const mapCenter = ref({ lat: 34.0012, lng: 71.5249 });
 onBeforeUnmount(() => {
   Object.keys(booking).forEach((key) => {
     booking[key] = "";
@@ -195,7 +195,7 @@ async function geocodePlaceplaceName(placename) {
     const geocoder = new google.maps.Geocoder();
     const result = await geocoder.geocode({
       address: placename,
-      componentRestrictions: { country: "AE" },
+      componentRestrictions: { country: "PK" },
     });
     if (result.results.length) {
       const location = result.results[0].geometry.location;

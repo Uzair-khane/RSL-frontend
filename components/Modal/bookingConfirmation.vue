@@ -92,7 +92,7 @@
               ><IconCost class="w-4 h-3 fill-black" />
               <span> Total cost: </span></label
             >
-            <p class="font-semibold">{{ booking.cost }} AED</p>
+            <p class="font-semibold">{{ booking.cost }} PKR</p>
           </div>
           <div class="flex gap-2 flex-wrap">
             <label class="md:min-w-36 flex items-center gap-2" for=""
@@ -112,7 +112,7 @@
 
         <div class="flex gap-3 justify-end">
           <button
-            @click="emit('toggleModal')"
+            @click="emit('toggle-modal')"
             class="bg-[#0693E3] rounded-md text-center text-white block mt-10 px-8 py-2"
           >
             Cancel
@@ -137,7 +137,7 @@
 <script setup>
 import { ref } from "vue";
 const loader = ref(false);
-const emit = defineEmits(["toggleModal"]);
+const emit = defineEmits(['toggle-modal']);
 const response = reactive({
   message: "",
   success: false,
