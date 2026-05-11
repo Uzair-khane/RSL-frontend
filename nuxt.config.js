@@ -31,11 +31,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       baseUrl: process.env.BASE_URL,
-      gmapKey: process.env.GMAP_ACCESS_TOKEN
+      gmapKey: process.env.GMAP_ACCESS_TOKEN,
+      socketUrl: process.env.BASE_URL  // ✅ Naya
     },
   },
   modules: ["nuxt-aos", 'nuxt-swiper'],
-
   mapbox: {
     accessToken: process.env.MAPBOX_ACCESS_TOKEN
   }

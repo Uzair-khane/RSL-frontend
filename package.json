@@ -16,6 +16,7 @@
     "nuxt": "^3.14.159",
     "nuxt-aos": "^1.2.5",
     "nuxt-swiper": "^1.2.2",
+    "socket.io-client": "^4.8.3",
     "vite": "^5.4.10",
     "vue": "latest",
     "vue-flatpickr-component": "^11.0.5",
