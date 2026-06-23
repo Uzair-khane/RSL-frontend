@@ -1,428 +1,277 @@
 <template>
-  <div class="fixed bg-[rgba(0,0,0,0.4)] -top-3 px-3 z-20 text-black flex justify-center items-center inset-0">
-    <div class="w-full md:w-1/2 bg-white relative px-3 rounded-md py-5 md:p-8">
+  <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-3 text-black">
+    <div class="relative w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl md:p-8">
 
       <!-- After Booking Response -->
       <div v-if="response.message">
 
         <!-- Success -->
         <div v-if="response.success">
+
+          <!-- Success Header -->
           <div class="text-center">
-            <div class="text-5xl mb-3">🎉</div>
-            <h3 class="text-2xl font-bold text-green-600">Booking Confirmed!</h3>
-            <p class="text-gray-500 mt-2 text-sm">
-              Your ride has been booked successfully. Please choose your payment option.
+            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <svg class="h-9 w-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h3 class="text-2xl font-bold text-gray-900">
+              Booking Confirmed!
+            </h3>
+
+            <p class="mt-2 text-sm text-gray-500">
+              Your ride has been booked successfully. Choose how you want to continue.
             </p>
           </div>
 
           <!-- Booking Summary -->
-          <div class="bg-gray-50 rounded-xl p-4 mt-5 text-sm space-y-2">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Booking ID:</span>
-              <span class="font-bold">#{{ response.booking_id }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">From:</span>
-              <span class="font-semibold">{{ booking.from_location }}</span>
-            </div>
-            <div class="flex justify-between" v-if="booking.to_location">
-              <span class="text-gray-500">To:</span>
-              <span class="font-semibold">{{ booking.to_location }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Date:</span>
-              <span class="font-semibold">{{ booking.pickup_date }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Time:</span>
-              <span class="font-semibold">{{ booking.pickup_time }}</span>
-            </div>
-            <div class="flex justify-between border-t pt-2 mt-2">
-              <span class="text-gray-500">Total Amount:</span>
-              <span class="font-bold text-[#0693E3] text-lg">PKR {{ booking.cost }}</span>
+          <div class="mt-6 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm">
+            <div class="space-y-3">
+
+              <div class="flex justify-between gap-4">
+                <span class="text-gray-500">Booking ID</span>
+                <span class="font-bold text-gray-900">#{{ response.booking_id }}</span>
+              </div>
+
+              <div class="flex justify-between gap-4">
+                <span class="text-gray-500">From</span>
+                <span class="text-right font-semibold text-gray-900">{{ booking.from_location }}</span>
+              </div>
+
+              <div v-if="booking.to_location" class="flex justify-between gap-4">
+                <span class="text-gray-500">To</span>
+                <span class="text-right font-semibold text-gray-900">{{ booking.to_location }}</span>
+              </div>
+
+              <div class="flex justify-between gap-4">
+                <span class="text-gray-500">Pickup Date</span>
+                <span class="font-semibold text-gray-900">{{ booking.pickup_date }}</span>
+              </div>
+
+              <div class="flex justify-between gap-4">
+                <span class="text-gray-500">Pickup Time</span>
+                <span class="font-semibold text-gray-900">{{ booking.pickup_time }}</span>
+              </div>
+
+              <div class="border-t border-gray-200 pt-3">
+                <div class="flex justify-between gap-4">
+                  <span class="text-gray-500">Total Amount</span>
+                  <span class="text-lg font-bold text-[#0693E3]">PKR {{ booking.cost }}</span>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- Options -->
+          <!-- Action Buttons -->
           <div class="mt-6 space-y-3">
-            <p class="text-center text-sm font-semibold text-gray-600 mb-2">
-              Choose an option:
-            </p>
 
             <!-- Pay Now -->
             <NuxtLink :to="paymentUrl"
-              class="flex items-center justify-center gap-3 w-full text-center bg-[#0693E3] hover:bg-blue-600 transition-all text-white py-3.5 rounded-xl font-semibold shadow-md">
-              <span>💳</span>
-              <div class="text-left">
-                <p class="font-bold">Pay Now (Online Transfer)</p>
-                <p class="text-xs opacity-80">Bank Alfalah transfer + screenshot</p>
-              </div>
+              class="flex w-full items-center justify-center rounded-xl bg-[#0693E3] px-5 py-4 text-center font-bold text-white shadow-md transition-all hover:bg-blue-600">
+              Pay Now
             </NuxtLink>
 
             <!-- Pay Later -->
-            <NuxtLink :to="trackingUrl"
-              class="flex items-center justify-center gap-3 w-full text-center bg-green-600 hover:bg-green-700 transition-all text-white py-3.5 rounded-xl font-semibold shadow-md">
-              <span>🚗</span>
-              <div class="text-left">
-                <p class="font-bold">Pay Later (Cash with Driver)</p>
-                <p class="text-xs opacity-80">Pay when driver arrives</p>
-              </div>
+            <NuxtLink :to="`/booking-details?id=${response.booking_id}`"
+              class="flex w-full items-center justify-center rounded-xl bg-green-600 px-5 py-4 text-center font-bold text-white shadow-md transition-all hover:bg-green-700">
+              Pay Later
             </NuxtLink>
 
             <!-- Track Ride -->
             <NuxtLink :to="trackingUrl"
-              class="flex items-center justify-center gap-3 w-full text-center bg-purple-600 hover:bg-purple-700 transition-all text-white py-3.5 rounded-xl font-semibold shadow-md">
-              <span>📍</span>
-              <div class="text-left">
-                <p class="font-bold">Track My Ride</p>
-                <p class="text-xs opacity-80">See live driver location</p>
-              </div>
+              class="flex w-full items-center justify-center rounded-xl bg-gray-900 px-5 py-4 text-center font-bold text-white shadow-md transition-all hover:bg-black">
+              Track My Ride
             </NuxtLink>
-            <!-- SOS Emergency Button -->
-            <button @click="showSosModal = true"
-              class="flex items-center justify-center gap-3 w-full text-center bg-red-600 hover:bg-red-700 transition-all text-white py-3.5 rounded-xl font-semibold shadow-md">
-              <span>🆘</span>
-              <div class="text-left">
-                <p class="font-bold">SOS Emergency</p>
-                <p class="text-xs opacity-80">Press for immediate help</p>
-              </div>
-            </button>
+
           </div>
+
+          <p class="mt-4 text-center text-xs text-gray-400">
+            Safety features are available inside the live tracking page.
+          </p>
+
         </div>
 
         <!-- Error -->
         <div v-else>
-          <h3 class="text-center text-2xl text-slate-700 font-semibold">Oops!</h3>
-          <p class="text-center mt-5 text-xl text-gray-500">
-            Something went wrong. Please try again after a while.
-          </p>
-          <NuxtLink to="/"
-            class="mt-5 block hover:bg-blue-600 transition-all text-center px-10 py-2.5 rounded-md text-white bg-blue-500">
-            Go to home</NuxtLink>
+          <div class="text-center">
+            <h3 class="text-2xl font-bold text-red-600">Oops!</h3>
+            <p class="mt-4 text-gray-500">
+              {{ response.message || 'Something went wrong. Please try again.' }}
+            </p>
+
+            <NuxtLink to="/"
+              class="mt-6 block rounded-xl bg-[#0693E3] px-8 py-3 text-center font-semibold text-white hover:bg-blue-600">
+              Go to Home
+            </NuxtLink>
+          </div>
         </div>
 
       </div>
 
-      <!-- Booking Details — Before Confirm -->
+      <!-- Before Confirm Booking -->
       <div v-else>
-        <h3 class="text-center font-semibold text-2xl">Your Ride Details</h3>
-        <div class="mt-5 space-y-4">
-          <div class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconProfile class="w-4 stroke-black h-4 fill-black" />
-              <span>Name:</span>
-            </label>
-            <p class="font-semibold">{{ booking.name }}</p>
+
+        <h3 class="text-center text-2xl font-bold text-gray-900">
+          Your Ride Details
+        </h3>
+
+        <p class="mt-2 text-center text-sm text-gray-500">
+          Please review your ride details before confirming.
+        </p>
+
+        <div class="mt-6 space-y-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Name</span>
+            <span class="text-right font-semibold">{{ booking.name }}</span>
           </div>
 
-          <div class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconMobile class="w-4 h-4 fill-black" />
-              <span>Phone:</span>
-            </label>
-            <p class="font-semibold">{{ booking.contact_no }}</p>
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Phone</span>
+            <span class="text-right font-semibold">{{ booking.contact_no }}</span>
           </div>
 
-          <div class="flex gap-2 flex-nowrap">
-            <label for="">
-              <IconFromLocation class="w-4 mt-1 h-4 fill-black" />
-            </label>
-            <div class="flex flex-wrap">
-              <span class="md:min-w-32 whitespace-nowrap">From location:</span>
-              <p class="font-semibold">{{ booking.from_location }}</p>
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">From</span>
+            <span class="text-right font-semibold">{{ booking.from_location }}</span>
+          </div>
+
+          <div v-if="booking.to_location" class="flex justify-between gap-4">
+            <span class="text-gray-500">To</span>
+            <span class="text-right font-semibold">{{ booking.to_location }}</span>
+          </div>
+
+          <div v-if="booking.distance" class="flex justify-between gap-4">
+            <span class="text-gray-500">Distance</span>
+            <span class="text-right font-semibold">{{ booking.distance }}</span>
+          </div>
+
+          <div v-if="booking.ride_type === 'hourly'" class="flex justify-between gap-4">
+            <span class="text-gray-500">Total Hours</span>
+            <span class="text-right font-semibold">{{ booking.hours }}</span>
+          </div>
+
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Pickup Date</span>
+            <span class="text-right font-semibold">{{ booking.pickup_date }}</span>
+          </div>
+
+          <div class="flex justify-between gap-4">
+            <span class="text-gray-500">Pickup Time</span>
+            <span class="text-right font-semibold">{{ booking.pickup_time }}</span>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4">
+            <div class="flex justify-between gap-4">
+              <span class="text-gray-500">Total Cost</span>
+              <span class="text-lg font-bold text-[#0693E3]">PKR {{ booking.cost }}</span>
             </div>
           </div>
 
-          <div v-if="booking.to_location" class="flex gap-2 flex-nowrap">
-            <label for="">
-              <IconToLocation class="w-4 mt-1 h-3 fill-black" />
-            </label>
-            <div class="flex flex-wrap">
-              <span class="md:min-w-32 whitespace-nowrap">To location:</span>
-              <p class="font-semibold">{{ booking.to_location }}</p>
-            </div>
-          </div>
-
-          <div v-if="booking.distance" class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconFromLocation class="w-4 h-4 fill-black" />
-              <span>Distance:</span>
-            </label>
-            <p class="font-semibold">{{ booking.distance }}</p>
-          </div>
-
-          <div v-if="booking.ride_type == 'hourly'" class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconTime class="w-4 h-4 fill-none stroke-black" />
-              <span>Total hours:</span>
-            </label>
-            <p class="font-semibold">{{ booking.hours }}</p>
-          </div>
-
-          <div class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconCost class="w-4 h-3 fill-black" />
-              <span>Total cost:</span>
-            </label>
-            <p class="font-semibold text-[#0693E3] font-bold">PKR {{ booking.cost }}</p>
-          </div>
-
-          <div class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconCalender class="w-4 h-4 stroke-black" />
-              <span>Pickup date:</span>
-            </label>
-            <p class="font-semibold">{{ booking.pickup_date }}</p>
-          </div>
-
-          <div class="flex gap-2 flex-wrap">
-            <label class="md:min-w-36 flex items-center gap-2" for="">
-              <IconTime class="w-4 h-4 fill-none stroke-black" />
-              <span>Pickup time:</span>
-            </label>
-            <p class="font-semibold">{{ booking.pickup_time }}</p>
-          </div>
         </div>
 
         <!-- Buttons -->
-        <div class="flex gap-3 justify-end mt-6">
-          <button @click="emit('toggle-modal')" class="bg-[#0693E3] rounded-md text-center text-white block px-8 py-2">
+        <div class="mt-6 flex gap-3">
+          <button @click="emit('toggle-modal')"
+            class="w-1/2 rounded-xl border border-gray-200 bg-white px-6 py-3 font-semibold text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
+
           <button @click="confirmBooking" :disabled="loader"
-            class="bg-green-600 w-36 h-10 flex justify-center items-center rounded-md text-center text-white block">
+            class="flex w-1/2 items-center justify-center rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-70">
             <span v-if="loader"
-              class="animate-spin rounded-full border-2 border-white w-5 block h-5 border-t-blue-500"></span>
+              class="block h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
             <span v-else>Confirm Booking</span>
           </button>
         </div>
+
       </div>
 
     </div>
   </div>
-  <!-- SOS Modal -->
-  <div v-if="showSosModal" class="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
-    <div class="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-10">
-
-      <!-- Header -->
-      <div class="text-center mb-5">
-        <div class="text-6xl mb-2">🆘</div>
-        <h3 class="text-2xl font-bold text-red-600">Emergency Help</h3>
-        <p class="text-gray-500 text-sm mt-1">Booking #{{ response.booking_id }}</p>
-      </div>
-
-      <!-- SOS Send Button -->
-      <button @click="triggerSOS" :disabled="sosLoader"
-        class="w-full bg-red-600 hover:bg-red-700 active:scale-95 transition-all text-white py-4 rounded-2xl font-bold text-lg mb-3 flex items-center justify-center gap-2">
-        <span v-if="!sosLoader">🚨 Send SOS Alert to Admin</span>
-        <span v-else class="animate-spin border-4 border-white border-t-transparent rounded-full w-6 h-6 block"></span>
-      </button>
-
-      <!-- Breakdown Button -->
-      <button @click="reportBreakdown" :disabled="breakdownLoader"
-        class="w-full bg-yellow-500 hover:bg-yellow-600 active:scale-95 transition-all text-white py-4 rounded-2xl font-bold text-lg mb-3 flex items-center justify-center gap-2">
-        <span v-if="!breakdownLoader">🔧 Report Breakdown</span>
-        <span v-else class="animate-spin border-4 border-white border-t-transparent rounded-full w-6 h-6 block"></span>
-      </button>
-
-      <!-- Call Office -->
-
-      <a href="tel:+923001234567" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold text-lg mb-3 flex items-center
-      justify-center gap-2 block text-center">
-        Call RSL Office
-      </a>
-
-      <!-- Fake Call -->
-      <button @click="startFakeCall"
-        class="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl font-bold text-lg mb-3">
-        Fake Call (Safety Trick)
-      </button>
-
-      <!-- Close -->
-      <button @click="showSosModal = false" class="w-full bg-gray-100 text-gray-600 py-3 rounded-2xl font-semibold">
-        Close
-      </button>
-
-    </div>
-  </div>
-
-  <!-- Fake Call Screen -->
-  <div v-if="fakeCallActive"
-    class="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center text-white">
-    <div class="text-8xl mb-6 animate-bounce"></div>
-    <p class="text-3xl font-bold">Incoming Call...</p>
-    <p class="text-gray-400 mt-2 text-lg">RSL Support</p>
-    <div class="flex gap-8 mt-16">
-      <button @click="fakeCallActive = false"
-        class="bg-red-600 rounded-full w-20 h-20 text-3xl shadow-xl flex items-center justify-center">❌</button>
-      <button @click="fakeCallActive = false"
-        class="bg-green-600 rounded-full w-20 h-20 text-3xl shadow-xl flex items-center justify-center">✅</button>
-    </div>
-  </div>
-
-  <!-- Toast -->
-  <transition name="fade">
-    <div v-if="toast.show" :class="toast.type === 'success' ? 'bg-green-600' : 'bg-red-700'"
-      class="fixed bottom-6 left-4 right-4 text-white text-center py-4 rounded-2xl shadow-2xl z-50 font-semibold">
-      {{ toast.message }}
-    </div>
-  </transition>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed } from 'vue';
 
-const loader = ref(false);
 const emit = defineEmits(['toggle-modal']);
-const showSosModal = ref(false);
-const sosLoader = ref(false);
-const breakdownLoader = ref(false);
-const fakeCallActive = ref(false);
-const toast = reactive({ show: false, message: '', type: 'success' });
-
-function showToast(message, type = 'success') {
-  toast.message = message;
-  toast.type = type;
-  toast.show = true;
-  setTimeout(() => toast.show = false, 4000);
-}
-
-function getLocation() {
-  return new Promise((resolve) => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve({ lat: null, lng: null })
-      );
-    } else {
-      resolve({ lat: null, lng: null });
-    }
-  });
-}
-
-async function triggerSOS() {
-  sosLoader.value = true;
-  const { lat, lng } = await getLocation();
-  try {
-    const res = await $useCustomFetch('/api/site/v1/safety/sos', {
-      method: 'POST',
-      body: {
-        booking_id: response.booking_id,
-        customer_id: booking.email,
-        latitude: lat,
-        longitude: lng
-      }
-    });
-    if (res.success) {
-      showToast('🆘 SOS sent! Admin notified immediately!', 'success');
-      showSosModal.value = false;
-    } else {
-      showToast('❌ Failed. Call office: +92 300 1234567', 'error');
-    }
-  } catch {
-    showToast('❌ Error. Call office: +92 300 1234567', 'error');
-  }
-  sosLoader.value = false;
-}
-
-async function reportBreakdown() {
-  breakdownLoader.value = true;
-  const { lat, lng } = await getLocation();
-  try {
-    const res = await $useCustomFetch('/api/site/v1/safety/breakdown', {
-      method: 'POST',
-      body: {
-        booking_id: response.booking_id,
-        customer_id: booking.email,
-        latitude: lat,
-        longitude: lng
-      }
-    });
-    if (res.success) {
-      showToast('🔧 Breakdown reported! Help coming.', 'success');
-      showSosModal.value = false;
-    } else {
-      showToast('❌ Failed. Call office directly.', 'error');
-    }
-  } catch {
-    showToast('❌ Error. Call office: +92 300 1234567', 'error');
-  }
-  breakdownLoader.value = false;
-}
-
-function startFakeCall() {
-  showSosModal.value = false;
-  fakeCallActive.value = true;
-  setTimeout(() => fakeCallActive.value = false, 30000);
-}
-const response = reactive({
-  message: "",
-  success: false,
-  booking_id: null,
-  amount: null,
-});
 
 const props = defineProps({
   booking: {
     type: Object,
-    default: {},
-  },
+    default: () => ({})
+  }
 });
 
-const { booking } = props;
 const { $useCustomFetch } = useNuxtApp();
 
-// Payment URL
-const paymentUrl = computed(() => {
-  return `/payment?booking_id=${response.booking_id}&amount=${response.amount}&name=${encodeURIComponent(booking.name)}&email=${encodeURIComponent(booking.email)}&contact=${encodeURIComponent(booking.contact_no)}&from_location=${encodeURIComponent(booking.from_location)}&to_location=${encodeURIComponent(booking.to_location || '')}&pickup_date=${encodeURIComponent(booking.pickup_date)}&pickup_time=${encodeURIComponent(booking.pickup_time)}&ride_type=${encodeURIComponent(booking.ride_type)}&distance=${encodeURIComponent(booking.distance || '')}&hours=${encodeURIComponent(booking.hours || '')}`;
+const booking = props.booking;
+const loader = ref(false);
+
+const response = reactive({
+  message: '',
+  success: false,
+  booking_id: null,
+  amount: null
 });
 
-// Tracking URL
+const paymentUrl = computed(() => {
+  return `/payment?booking_id=${response.booking_id}
+&amount=${response.amount}
+&name=${encodeURIComponent(booking.name || '')}
+&email=${encodeURIComponent(booking.email || '')}
+&contact=${encodeURIComponent(booking.contact_no || '')}
+&from_location=${encodeURIComponent(booking.from_location || '')}
+&to_location=${encodeURIComponent(booking.to_location || '')}
+&pickup_date=${encodeURIComponent(booking.pickup_date || '')}
+&pickup_time=${encodeURIComponent(booking.pickup_time || '')}
+&ride_type=${encodeURIComponent(booking.ride_type || '')}
+&distance=${encodeURIComponent(booking.distance || '')}
+&hours=${encodeURIComponent(booking.hours || '')}`.replace(/\s+/g, '');
+});
+
 const trackingUrl = computed(() => {
-  return `/tracking?booking_id=${response.booking_id}&from_location=${encodeURIComponent(booking.from_location)}&to_location=${encodeURIComponent(booking.to_location || '')}&customer_id=${encodeURIComponent(booking.email)}`;
+  return `/tracking?booking_id=${response.booking_id}
+&from_location=${encodeURIComponent(booking.from_location || '')}
+&to_location=${encodeURIComponent(booking.to_location || '')}
+&customer_id=${encodeURIComponent(booking.customer_id || '')}
+&driver_id=${encodeURIComponent(booking.driver_id || '')}
+&driver_phone=${encodeURIComponent(booking.driver_phone || '')}`.replace(/\s+/g, '');
 });
 
 async function confirmBooking() {
   loader.value = true;
+
   const data = { ...booking };
 
   if (!booking.to_location) delete data.to_location;
-  if (booking.ride_type != "hourly") delete data.hours;
+  if (booking.ride_type !== 'hourly') delete data.hours;
   if (!booking.distance) delete data.distance;
 
   try {
-    const res = await $useCustomFetch("/api/site/v1/booking/add", {
-      method: "POST",
-      body: { ...data },
+    const res = await $useCustomFetch('/api/site/v1/booking/add', {
+      method: 'POST',
+      body: { ...data }
     });
 
     if (res.success) {
       response.success = true;
-      response.message = res.message;
+      response.message = res.message || 'Booking confirmed successfully.';
       response.booking_id = res.booking_id;
       response.amount = booking.cost;
     } else {
       response.success = false;
-      response.message = res.message || "Something went wrong.";
+      response.message = res.message || 'Something went wrong.';
     }
 
-  } catch (err) {
+  } catch (error) {
+    console.error('Booking Confirm Error:', error);
     response.success = false;
-    response.message = "Something went wrong.";
-    console.log(err);
+    response.message = 'Something went wrong. Please try again.';
   }
 
   loader.value = false;
 }
 </script>
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
