@@ -23,11 +23,8 @@
       >
         <Marker
           v-if="hasValidDriverLocation"
-          :key="`${driverLocation.lat}-${driverLocation.lng}`"
-          :options="{
-            position: driverLocation,
-            title: 'Driver Current Location'
-          }"
+          :key="markerKey"
+          :options="markerOptions"
         />
       </GoogleMap>
 
@@ -55,7 +52,6 @@
 
     <div class="bg-white rounded-t-3xl -mt-4 relative z-10 px-4 pt-6 pb-8 shadow-lg">
 
-      <!-- Driver Main Card -->
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
         <div class="flex items-center gap-4">
           <div class="bg-[#0693E3] rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
@@ -96,84 +92,6 @@
         </div>
       </div>
 
-      <!-- Driver Full Details -->
-      <div v-if="driverName" class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 text-sm">
-        <h3 class="font-bold text-lg mb-3 text-gray-800">Driver Full Details</h3>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Name</p>
-            <p class="font-semibold">{{ driverName }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Contact</p>
-            <p class="font-semibold">{{ driverContact || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Email</p>
-            <p class="font-semibold break-all">{{ driverEmail || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Rating</p>
-            <p class="font-semibold">⭐ {{ driverRating || '5.0' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Total Rides</p>
-            <p class="font-semibold">{{ driverTotalRides || 0 }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Experience</p>
-            <p class="font-semibold">{{ driverExperience || 0 }} years</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">License No</p>
-            <p class="font-semibold">{{ driverLicense || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">CNIC</p>
-            <p class="font-semibold">{{ driverCnic || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Passport No</p>
-            <p class="font-semibold">{{ driverPassport || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Emergency Contact</p>
-            <p class="font-semibold">{{ driverEmergencyContact || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Driver Status</p>
-            <p class="font-semibold">{{ driverStatus == 1 ? 'Active' : 'Inactive' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3">
-            <p class="text-gray-400 text-xs">Verification</p>
-            <p class="font-semibold">{{ driverVerified == 1 ? 'Verified' : 'Not Verified' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3 md:col-span-2">
-            <p class="text-gray-400 text-xs">Address</p>
-            <p class="font-semibold">{{ driverAddress || 'N/A' }}</p>
-          </div>
-
-          <div class="bg-gray-50 rounded-xl p-3 md:col-span-2">
-            <p class="text-gray-400 text-xs">Current Address</p>
-            <p class="font-semibold">{{ driverCurrentAddress || 'N/A' }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ride Details -->
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
         <h3 class="font-bold mb-3">Ride Details</h3>
 
@@ -190,7 +108,6 @@
         </div>
       </div>
 
-      <!-- Location Info -->
       <div v-if="hasValidDriverLocation" class="bg-blue-50 rounded-2xl p-4 mb-4 text-sm">
         <p class="font-semibold text-[#0693E3] mb-1">Driver Current Location</p>
         <p class="text-gray-600">
@@ -201,60 +118,6 @@
 
       <div v-else class="bg-yellow-50 rounded-2xl p-4 mb-4 text-sm text-yellow-700">
         Waiting for driver to start sharing location...
-      </div>
-
-      <!-- Safety Buttons -->
-      <div class="grid grid-cols-2 gap-3 mt-2">
-        <NuxtLink
-          :to="safetyUrl"
-          class="flex flex-col items-center justify-center gap-1 bg-red-600 text-white py-4 rounded-2xl shadow-lg"
-        >
-          <span class="font-bold text-sm">SOS Emergency</span>
-          <span class="text-xs opacity-80">Press for help</span>
-        </NuxtLink>
-
-        <NuxtLink
-          :to="safetyUrl"
-          class="flex flex-col items-center justify-center gap-1 bg-orange-500 text-white py-4 rounded-2xl shadow-lg"
-        >
-          <span class="font-bold text-sm">Safety Center</span>
-          <span class="text-xs opacity-80">Breakdown & more</span>
-        </NuxtLink>
-      </div>
-    </div>
-
-    <!-- Share Modal -->
-    <div v-if="showShareModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
-      <div class="bg-white rounded-3xl w-full max-w-lg p-6">
-        <h3 class="font-bold text-xl mb-2">Share Live Location</h3>
-        <p class="text-gray-500 text-sm mb-4">
-          Share this link with family or friends to track the ride live.
-        </p>
-
-        <div class="bg-gray-100 rounded-xl p-3 flex items-center gap-2 mb-4">
-          <p class="text-sm text-gray-600 flex-1 truncate">{{ shareUrl }}</p>
-          <button @click="copyLink" class="bg-[#0693E3] text-white px-3 py-1.5 rounded-lg text-sm font-semibold">
-            {{ copied ? 'Copied' : 'Copy' }}
-          </button>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3 mb-4">
-          <a :href="whatsappShareUrl" target="_blank" class="bg-green-50 rounded-xl p-3 text-center text-xs font-semibold text-green-700">
-            WhatsApp
-          </a>
-
-          <a :href="smsShareUrl" class="bg-blue-50 rounded-xl p-3 text-center text-xs font-semibold text-blue-700">
-            SMS
-          </a>
-
-          <a :href="emailShareUrl" class="bg-gray-50 rounded-xl p-3 text-center text-xs font-semibold text-gray-700">
-            Email
-          </a>
-        </div>
-
-        <button @click="showShareModal = false" class="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold">
-          Close
-        </button>
       </div>
     </div>
 
@@ -278,19 +141,11 @@ const customerId = ref('');
 const driverId = ref('');
 const driverName = ref('');
 const driverContact = ref('');
-const driverEmail = ref('');
 const driverImage = ref('');
-const driverLicense = ref('');
-const driverCnic = ref('');
-const driverPassport = ref('');
-const driverAddress = ref('');
-const driverStatus = ref('');
 const driverRating = ref('');
 const driverTotalRides = ref('');
 const driverExperience = ref('');
-const driverEmergencyContact = ref('');
 const driverVerified = ref('');
-const driverCurrentAddress = ref('');
 
 const googleMapKey = config.public.gmapKey;
 
@@ -302,7 +157,6 @@ const mapCenter = ref({
 const driverLocation = ref(null);
 const lastUpdate = ref('');
 const showShareModal = ref(false);
-const copied = ref(false);
 
 let trackingInterval = null;
 
@@ -316,38 +170,29 @@ const hasValidDriverLocation = computed(() => {
   );
 });
 
-const shareUrl = computed(() => {
-  if (!process.client) return '';
-  return `${window.location.origin}/tracking?booking_id=${bookingId.value}`;
+const markerKey = computed(() => {
+  if (!hasValidDriverLocation.value) return 'no-marker';
+  return `${driverLocation.value.lat}-${driverLocation.value.lng}`;
+});
+
+const markerOptions = computed(() => {
+  if (!hasValidDriverLocation.value) return {};
+
+  return {
+    position: {
+      lat: driverLocation.value.lat,
+      lng: driverLocation.value.lng
+    },
+    title: 'Driver Current Location'
+  };
 });
 
 const safetyUrl = computed(() => {
   return `/safety?booking_id=${bookingId.value}&customer_id=${customerId.value}&driver_id=${driverId.value}&driver_phone=${driverContact.value}`;
 });
 
-const whatsappShareUrl = computed(() => {
-  return `https://wa.me/?text=${encodeURIComponent('Track my RSL ride live: ' + shareUrl.value)}`;
-});
-
-const smsShareUrl = computed(() => {
-  return `sms:?body=${encodeURIComponent('Track my RSL ride live: ' + shareUrl.value)}`;
-});
-
-const emailShareUrl = computed(() => {
-  return `mailto:?subject=Track My RSL Ride&body=${encodeURIComponent('Track my RSL ride live: ' + shareUrl.value)}`;
-});
-
 function formatTime(date) {
   return new Date(date).toLocaleTimeString();
-}
-
-function copyLink() {
-  navigator.clipboard.writeText(shareUrl.value);
-  copied.value = true;
-
-  setTimeout(() => {
-    copied.value = false;
-  }, 2000);
 }
 
 async function fetchBookingStatus() {
@@ -355,8 +200,6 @@ async function fetchBookingStatus() {
 
   try {
     const res = await $useCustomFetch(`/api/site/v1/booking/status/${bookingId.value}`);
-
-    console.log('Booking Status Response:', res);
 
     if (res.success && res.data) {
       fromLocation.value = res.data.from_location || '';
@@ -367,19 +210,11 @@ async function fetchBookingStatus() {
         driverId.value = res.data.driver.id || '';
         driverName.value = res.data.driver.name || '';
         driverContact.value = res.data.driver.contact || '';
-        driverEmail.value = res.data.driver.email || '';
         driverImage.value = res.data.driver.image || '';
-        driverLicense.value = res.data.driver.license_no || '';
-        driverCnic.value = res.data.driver.id_card_no || '';
-        driverPassport.value = res.data.driver.passport_no || '';
-        driverAddress.value = res.data.driver.address || '';
-        driverStatus.value = res.data.driver.driver_status || '';
         driverRating.value = res.data.driver.rating || '';
         driverTotalRides.value = res.data.driver.total_rides || '';
         driverExperience.value = res.data.driver.experience_years || '';
-        driverEmergencyContact.value = res.data.driver.emergency_contact || '';
         driverVerified.value = res.data.driver.verified_status || '';
-        driverCurrentAddress.value = res.data.driver.current_address || '';
       }
     }
   } catch (error) {
@@ -396,8 +231,8 @@ async function fetchLatestLocation() {
     console.log('Location API Response:', res);
 
     if (res.success && res.data) {
-      const lat = Number(res.data.latitude);
-      const lng = Number(res.data.longitude);
+      const lat = parseFloat(res.data.latitude);
+      const lng = parseFloat(res.data.longitude);
 
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
         driverLocation.value = { lat, lng };
