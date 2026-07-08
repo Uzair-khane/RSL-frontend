@@ -32,7 +32,7 @@ export default defineNuxtConfig({
     public: {
       baseUrl: process.env.BASE_URL,
       gmapKey: process.env.GMAP_ACCESS_TOKEN,
-      socketUrl: process.env.BASE_URL  // ✅ Naya
+      socketUrl: process.env.BASE_URL  
     },
   },
   modules: ["nuxt-aos", 'nuxt-swiper'],
