@@ -311,7 +311,7 @@
         <button
           type="submit"
           :disabled="loader"
-          class="bg-[#404040] h-12 hover:bg-slate-700 transition-all flex justify-center items-center mx-auto block w-full md:w-1/3 mt-10 px-12 py-2.5 rounded-md text-white disabled:cursor-not-allowed disabled:opacity-60"
+          class="bg-[#404040] h-12 hover:bg-slate-700 transition-all flex justify-center items-end mx-auto block w-full md:w-1/3 mt-10 px-12 py-2.5 rounded-md text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           Book ride
         </button>
