@@ -138,6 +138,132 @@
         </div>
       </div>
 
+      <!-- AI SMART ETA PREDICTION CARD -->
+      <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 rounded-2xl p-4 mb-4">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 class="font-bold text-gray-900">AI Smart ETA Prediction</h3>
+            <p class="text-xs text-gray-500">
+              Arrival estimate based on driver GPS and pickup location
+            </p>
+          </div>
+
+          <button
+            @click="fetchAiEta"
+            :disabled="etaLoading || !bookingId || !driverId"
+            class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ etaLoading ? 'Checking...' : 'Refresh ETA' }}
+          </button>
+        </div>
+
+        <div
+          v-if="etaError"
+          class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-3"
+        >
+          {{ etaError }}
+        </div>
+
+        <div
+          v-if="!etaPrediction && !etaError && !etaLoading"
+          class="bg-white/70 rounded-xl p-3 text-sm text-gray-600"
+        >
+          ETA will appear after driver location and booking details are available.
+        </div>
+
+        <div
+          v-if="etaLoading && !etaPrediction"
+          class="bg-white/70 rounded-xl p-3 text-sm text-gray-600"
+        >
+          Calculating AI ETA prediction...
+        </div>
+
+        <div v-if="etaPrediction" class="space-y-4">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-white rounded-xl p-3 shadow-sm">
+              <p class="text-xs text-gray-400">Estimated Arrival</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ etaPrediction.estimated_arrival_minutes }} min
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-3 shadow-sm">
+              <p class="text-xs text-gray-400">Distance</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ etaPrediction.distance_km }} km
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-3 shadow-sm">
+              <p class="text-xs text-gray-400">Confidence</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ etaPrediction.confidence }}%
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-3 shadow-sm">
+              <p class="text-xs text-gray-400">Status</p>
+              <span
+                class="inline-flex mt-1 px-3 py-1 rounded-full text-xs font-bold capitalize"
+                :class="etaStatusClass"
+              >
+                {{ etaPrediction.status }}
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-3 shadow-sm text-sm">
+            <div class="flex flex-wrap items-center gap-2 text-gray-600">
+              <span>
+                ETA Range:
+                <strong>
+                  {{ etaPrediction.eta_range?.min_minutes }}–{{ etaPrediction.eta_range?.max_minutes }} min
+                </strong>
+              </span>
+
+              <span class="hidden sm:inline">•</span>
+
+              <span>
+                Source:
+                <strong class="capitalize">
+                  {{ formatSource(etaPrediction.location_source) }}
+                </strong>
+              </span>
+
+              <span v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined" class="hidden sm:inline">•</span>
+
+              <span v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined">
+                Location Age:
+                <strong>
+                  {{ etaPrediction.location_age_minutes }} min
+                </strong>
+              </span>
+            </div>
+
+            <p v-if="etaLastUpdated" class="text-xs text-gray-400 mt-1">
+              Last ETA update: {{ etaLastUpdated }}
+            </p>
+          </div>
+
+          <div
+            v-if="etaPrediction.reasons && etaPrediction.reasons.length"
+            class="bg-white rounded-xl p-3 shadow-sm"
+          >
+            <p class="font-semibold text-sm text-gray-800 mb-2">AI Reasoning</p>
+            <ul class="space-y-1 text-xs text-gray-600">
+              <li
+                v-for="(reason, index) in etaPrediction.reasons"
+                :key="index"
+                class="flex gap-2"
+              >
+                <span class="text-[#0693E3] font-bold">•</span>
+                <span>{{ reason }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
         <h3 class="font-bold mb-3">Ride Details</h3>
 
@@ -184,6 +310,9 @@ const fromLocation = ref('');
 const toLocation = ref('');
 const customerId = ref('');
 
+const pickupLat = ref(null);
+const pickupLng = ref(null);
+
 const driverId = ref('');
 const driverName = ref('');
 const driverContact = ref('');
@@ -192,6 +321,11 @@ const driverRating = ref('');
 const driverTotalRides = ref('');
 const driverExperience = ref('');
 const driverVerified = ref('');
+
+const etaPrediction = ref(null);
+const etaLoading = ref(false);
+const etaError = ref('');
+const etaLastUpdated = ref('');
 
 const googleMapKey = config.public.gmapKey;
 
@@ -208,6 +342,7 @@ const isOnline = ref(true);
 const offlineCount = ref(0);
 
 let trackingInterval = null;
+let etaInterval = null;
 let offlineGpsInterval = null;
 
 const OFFLINE_STORAGE_KEY = 'rsl_offline_locations';
@@ -239,12 +374,57 @@ const markerOptions = computed(() => {
   };
 });
 
+const etaStatusClass = computed(() => {
+  const status = etaPrediction.value?.status;
+
+  if (status === 'nearby') {
+    return 'bg-green-100 text-green-700';
+  }
+
+  if (status === 'delayed') {
+    return 'bg-red-100 text-red-700';
+  }
+
+  return 'bg-blue-100 text-blue-700';
+});
+
 const safetyUrl = computed(() => {
   return `/safety?booking_id=${bookingId.value}&customer_id=${customerId.value}&driver_id=${driverId.value}&driver_phone=${driverContact.value}`;
 });
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString();
+}
+
+function formatSource(source) {
+  if (!source) return 'Unknown';
+
+  return String(source).replace(/_/g, ' ');
+}
+
+function toNumberOrNull(value) {
+  const numberValue = Number(value);
+
+  if (Number.isNaN(numberValue)) {
+    return null;
+  }
+
+  return numberValue;
+}
+
+function getFirstValue(object, keys) {
+  for (const key of keys) {
+    if (
+      object &&
+      object[key] !== undefined &&
+      object[key] !== null &&
+      object[key] !== ''
+    ) {
+      return object[key];
+    }
+  }
+
+  return null;
 }
 
 function getOfflineLocations() {
@@ -398,6 +578,7 @@ async function syncOfflineLocations() {
       console.log('Offline locations synced:', res);
       clearOfflineLocations();
       await fetchLatestLocation();
+      await fetchAiEta();
     } else {
       console.log('Offline sync failed:', res.message);
     }
@@ -426,10 +607,34 @@ async function fetchBookingStatus() {
     if (res.success && res.data) {
       fromLocation.value = res.data.from_location || '';
       toLocation.value = res.data.to_location || '';
-      customerId.value = res.data.id || '';
+      customerId.value = res.data.customer_id || res.data.user_id || res.data.id || '';
+
+      pickupLat.value = toNumberOrNull(
+        getFirstValue(res.data, [
+          'pickup_lat',
+          'pickupLat',
+          'from_lat',
+          'fromLat',
+          'source_lat',
+          'sourceLat',
+          'latitude'
+        ])
+      );
+
+      pickupLng.value = toNumberOrNull(
+        getFirstValue(res.data, [
+          'pickup_lng',
+          'pickupLng',
+          'from_lng',
+          'fromLng',
+          'source_lng',
+          'sourceLng',
+          'longitude'
+        ])
+      );
 
       if (res.data.driver) {
-        driverId.value = res.data.driver.id || '';
+        driverId.value = res.data.driver.id || driverId.value || '';
         driverName.value = res.data.driver.name || '';
         driverContact.value = res.data.driver.contact || '';
         driverImage.value = res.data.driver.image || '';
@@ -437,6 +642,14 @@ async function fetchBookingStatus() {
         driverTotalRides.value = res.data.driver.total_rides || '';
         driverExperience.value = res.data.driver.experience_years || '';
         driverVerified.value = res.data.driver.verified_status || '';
+      }
+
+      if (!driverId.value) {
+        driverId.value =
+          res.data.driver_id ||
+          res.data.driverId ||
+          res.data.assigned_driver_id ||
+          '';
       }
     }
   } catch (error) {
@@ -461,6 +674,14 @@ async function fetchLatestLocation() {
       const lat = parseFloat(res.data.latitude);
       const lng = parseFloat(res.data.longitude);
 
+      if (!driverId.value) {
+        driverId.value =
+          res.data.driver_id ||
+          res.data.driverId ||
+          res.data.driver?.id ||
+          '';
+      }
+
       if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
         driverLocation.value = { lat, lng };
         mapCenter.value = { lat, lng };
@@ -469,6 +690,56 @@ async function fetchLatestLocation() {
     }
   } catch (error) {
     console.log('Location Error:', error);
+  }
+}
+
+async function fetchAiEta() {
+  etaError.value = '';
+
+  if (!bookingId.value) {
+    etaError.value = 'Booking ID is missing.';
+    return;
+  }
+
+  if (!driverId.value) {
+    etaError.value = 'Driver is not assigned yet.';
+    return;
+  }
+
+  if (!navigator.onLine) {
+    etaError.value = 'ETA prediction is not available in offline mode.';
+    return;
+  }
+
+  try {
+    etaLoading.value = true;
+
+    const body = {
+      booking_id: Number(bookingId.value) || bookingId.value,
+      driver_id: Number(driverId.value) || driverId.value
+    };
+
+    if (pickupLat.value !== null && pickupLng.value !== null) {
+      body.pickup_lat = pickupLat.value;
+      body.pickup_lng = pickupLng.value;
+    }
+
+    const res = await $useCustomFetch('/api/site/v1/ai/predict-eta', {
+      method: 'POST',
+      body
+    });
+
+    if (res.success) {
+      etaPrediction.value = res;
+      etaLastUpdated.value = formatTime(new Date());
+    } else {
+      etaError.value = res.message || 'Unable to generate ETA prediction.';
+    }
+  } catch (error) {
+    console.log('AI ETA Error:', error);
+    etaError.value = error?.data?.message || error?.message || 'AI ETA prediction failed.';
+  } finally {
+    etaLoading.value = false;
   }
 }
 
@@ -484,6 +755,7 @@ onMounted(async () => {
   if (navigator.onLine) {
     await syncOfflineLocations();
     await fetchLatestLocation();
+    await fetchAiEta();
   } else {
     handleOffline();
   }
@@ -496,10 +768,18 @@ onMounted(async () => {
       handleOffline();
     }
   }, 3000);
+
+  etaInterval = setInterval(async () => {
+    if (navigator.onLine) {
+      await fetchAiEta();
+    }
+  }, 15000);
 });
 
 onBeforeUnmount(() => {
   if (trackingInterval) clearInterval(trackingInterval);
+  if (etaInterval) clearInterval(etaInterval);
+
   stopOfflineGpsTracking();
 
   window.removeEventListener('online', handleOnline);
