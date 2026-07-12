@@ -1,37 +1,40 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- HEADER -->
-    <div class="bg-[#0693E3] text-white px-4 py-4 flex items-center justify-between">
-      <div>
-        <h1 class="font-bold text-lg">Live Ride Tracking</h1>
-        <p class="text-xs opacity-80">Booking #{{ bookingId }}</p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <div
-          class="flex items-center gap-1 px-3 py-1 rounded-full"
-          :class="isOnline ? 'bg-white/20' : 'bg-red-500'"
-        >
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="isOnline ? 'bg-green-400 animate-ping' : 'bg-white'"
-          ></span>
-          <span class="text-xs font-semibold">
-            {{ isOnline ? 'LIVE' : 'OFFLINE' }}
-          </span>
+  <div class="min-h-screen bg-gray-100">
+    <!-- PREMIUM HEADER -->
+    <div class="bg-gradient-to-r from-[#0693E3] via-[#0878C9] to-[#045A9C] text-white px-4 py-5 shadow-lg">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.25em] opacity-80">Real Smart Limousine</p>
+          <h1 class="font-bold text-xl mt-1">Live Ride Tracking</h1>
+          <p class="text-xs opacity-80 mt-1">Booking #{{ bookingId }}</p>
         </div>
 
-        <div
-          v-if="offlineCount > 0"
-          class="bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-1 rounded-full"
-        >
-          {{ offlineCount }} saved
+        <div class="flex items-center gap-2">
+          <div
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20"
+            :class="isOnline ? 'bg-white/20' : 'bg-red-500'"
+          >
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="isOnline ? 'bg-green-300 animate-ping' : 'bg-white'"
+            ></span>
+            <span class="text-xs font-semibold">
+              {{ isOnline ? 'LIVE' : 'OFFLINE' }}
+            </span>
+          </div>
+
+          <div
+            v-if="offlineCount > 0"
+            class="bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-1 rounded-full"
+          >
+            {{ offlineCount }} saved
+          </div>
         </div>
       </div>
     </div>
 
     <!-- MAP -->
-    <div class="relative">
+    <div class="relative bg-gray-200">
       <GoogleMap
         :api-key="googleMapKey"
         :center="mapCenter"
@@ -39,20 +42,30 @@
         class="w-full"
         style="height: 60vh;"
       >
-        <!-- Red driver marker -->
         <Marker
           v-if="hasValidDriverLocation"
           :key="markerKey"
           :options="markerOptions"
         />
 
-        <!-- Green pickup marker -->
         <Marker
           v-if="hasValidPickupLocation"
           :key="pickupMarkerKey"
           :options="pickupMarkerOptions"
         />
       </GoogleMap>
+
+      <div class="absolute top-4 left-4 bg-white/95 backdrop-blur shadow-lg rounded-2xl px-4 py-3 text-xs text-gray-700 border border-white">
+        <p class="font-bold text-gray-900">Tracking Legend</p>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="w-3 h-3 rounded-full bg-red-600"></span>
+          <span>Driver / Vehicle</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="w-3 h-3 rounded-full bg-green-600"></span>
+          <span>Pickup Point</span>
+        </div>
+      </div>
 
       <button
         @click="showShareModal = true"
@@ -62,8 +75,15 @@
       </button>
 
       <button
+        @click="resetDriverToOffice"
+        class="absolute top-16 right-4 bg-gray-900 text-white shadow-lg rounded-full px-4 py-2 text-xs font-semibold"
+      >
+        Reset Office
+      </button>
+
+      <button
         @click="saveTestOfflineLocation"
-        class="absolute top-16 right-4 bg-orange-600 text-white shadow-lg rounded-full px-4 py-2 text-xs font-semibold"
+        class="absolute top-28 right-4 bg-orange-600 text-white shadow-lg rounded-full px-4 py-2 text-xs font-semibold"
       >
         Test Offline Save
       </button>
@@ -84,8 +104,7 @@
     </div>
 
     <!-- CONTENT -->
-    <div class="bg-white rounded-t-3xl -mt-4 relative z-10 px-4 pt-6 pb-8 shadow-lg">
-      <!-- OFFLINE ALERT -->
+    <div class="bg-white rounded-t-[2rem] -mt-5 relative z-10 px-4 pt-6 pb-8 shadow-2xl">
       <div
         v-if="!isOnline"
         class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 text-sm text-red-700"
@@ -108,10 +127,33 @@
         </button>
       </div>
 
+      <!-- QUICK STATUS STRIP -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-[#0693E3]/10 border border-[#0693E3]/20 rounded-2xl p-3">
+          <p class="text-xs text-gray-500">Tracking Mode</p>
+          <p class="font-bold text-gray-900">{{ demoMoving ? 'Demo Running' : 'Live Ready' }}</p>
+        </div>
+
+        <div class="bg-green-50 border border-green-100 rounded-2xl p-3">
+          <p class="text-xs text-gray-500">Driver Source</p>
+          <p class="font-bold text-gray-900">{{ formatSource(driverLocationSource || 'Office Default') }}</p>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3">
+          <p class="text-xs text-gray-500">ETA Source</p>
+          <p class="font-bold text-gray-900">{{ formatSource(etaPrediction?.eta_source || 'Pending') }}</p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+          <p class="text-xs text-gray-500">Status</p>
+          <p class="font-bold text-gray-900 capitalize">{{ etaPrediction?.status || 'Waiting' }}</p>
+        </div>
+      </div>
+
       <!-- DRIVER DETAILS CARD -->
-      <div class="bg-gray-50 rounded-2xl p-4 mb-4">
+      <div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center gap-4">
-          <div class="bg-[#0693E3] rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
+          <div class="bg-gradient-to-br from-[#0693E3] to-[#045A9C] rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold overflow-hidden shadow-lg">
             <img v-if="driverImage" :src="driverImage" class="w-full h-full object-cover" />
             <span v-else>{{ driverName ? driverName[0] : '?' }}</span>
           </div>
@@ -119,11 +161,19 @@
           <div class="flex-1">
             <div class="flex items-center gap-2 flex-wrap">
               <p class="font-bold text-xl">{{ driverName || 'Assigning Driver...' }}</p>
+
               <span
                 v-if="driverVerified == 1"
                 class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-semibold"
               >
                 Verified
+              </span>
+
+              <span
+                v-if="driverLocationSource"
+                class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold"
+              >
+                {{ formatSource(driverLocationSource) }}
               </span>
             </div>
 
@@ -177,6 +227,7 @@
             >
               Call
             </a>
+
             <a
               :href="`sms:${driverContact}`"
               class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold text-center"
@@ -188,13 +239,18 @@
       </div>
 
       <!-- AI DRIVER ARRIVAL ETA CARD -->
-      <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 rounded-2xl p-4 mb-4">
+      <div class="bg-gradient-to-br from-blue-50 via-cyan-50 to-white border border-blue-100 rounded-3xl p-4 mb-4 shadow-sm">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-3">
           <div>
-            <h3 class="font-bold text-gray-900">AI Driver Arrival ETA</h3>
-            <p class="text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+              <span class="bg-[#0693E3] text-white text-xs font-bold px-2 py-1 rounded-full">AI</span>
+              <h3 class="font-bold text-gray-900">Driver Arrival ETA</h3>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-1">
               Driver-to-pickup arrival estimate using Google Maps driving route.
             </p>
+
             <p class="text-[11px] text-blue-600 mt-1">
               This predicts when the driver will reach pickup point, not full pickup-to-drop trip duration.
             </p>
@@ -208,7 +264,7 @@
             </p>
 
             <p v-if="demoMode" class="text-[11px] text-green-700 mt-1 font-semibold">
-              Demo mode active: driver marker is moving toward pickup location.
+              Demo mode active: driver marker is moving from City Towers office toward pickup location.
             </p>
           </div>
 
@@ -216,15 +272,15 @@
             <button
               @click="fetchAiEta"
               :disabled="etaLoading || !bookingId || !driverId"
-              class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {{ etaLoading ? 'Checking...' : 'Refresh ETA' }}
             </button>
 
             <button
               @click="startDemoMovement"
-              :disabled="demoMoving || !bookingId"
-              class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="demoMoving || !bookingId || !driverId"
+              class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {{ demoMoving ? 'Moving...' : 'Start Demo Movement' }}
             </button>
@@ -232,7 +288,7 @@
             <button
               v-if="demoMoving"
               @click="stopDemoMovement"
-              class="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-semibold"
+              class="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm"
             >
               Stop
             </button>
@@ -262,28 +318,28 @@
 
         <div v-if="etaPrediction" class="space-y-4">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="bg-white rounded-xl p-3 shadow-sm">
+            <div class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
               <p class="text-xs text-gray-400">Estimated Arrival</p>
-              <p class="text-2xl font-bold text-gray-900">
-                {{ etaPrediction.estimated_arrival_minutes }} min
+              <p class="text-xl md:text-2xl font-bold text-gray-900">
+                {{ formatEtaDuration(etaPrediction.estimated_arrival_minutes) }}
               </p>
             </div>
 
-            <div class="bg-white rounded-xl p-3 shadow-sm">
+            <div class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
               <p class="text-xs text-gray-400">Driver to Pickup</p>
               <p class="text-2xl font-bold text-gray-900">
                 {{ etaPrediction.distance_km }} km
               </p>
             </div>
 
-            <div class="bg-white rounded-xl p-3 shadow-sm">
+            <div class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
               <p class="text-xs text-gray-400">Confidence</p>
               <p class="text-2xl font-bold text-gray-900">
                 {{ etaPrediction.confidence }}%
               </p>
             </div>
 
-            <div class="bg-white rounded-xl p-3 shadow-sm">
+            <div class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
               <p class="text-xs text-gray-400">Status</p>
               <span
                 class="inline-flex mt-1 px-3 py-1 rounded-full text-xs font-bold capitalize"
@@ -294,12 +350,14 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-xl p-3 shadow-sm text-sm">
+          <div class="bg-white rounded-2xl p-3 shadow-sm text-sm border border-gray-100">
             <div class="flex flex-wrap items-center gap-2 text-gray-600">
               <span>
                 ETA Range:
                 <strong>
-                  {{ etaPrediction.eta_range?.min_minutes }}–{{ etaPrediction.eta_range?.max_minutes }} min
+                  {{ formatEtaDuration(etaPrediction.eta_range?.min_minutes) }}
+                  –
+                  {{ formatEtaDuration(etaPrediction.eta_range?.max_minutes) }}
                 </strong>
               </span>
 
@@ -307,18 +365,14 @@
 
               <span>
                 Route Source:
-                <strong>
-                  {{ formatSource(etaPrediction.eta_source) }}
-                </strong>
+                <strong>{{ formatSource(etaPrediction.eta_source) }}</strong>
               </span>
 
               <span class="hidden sm:inline">•</span>
 
               <span>
                 Location Source:
-                <strong>
-                  {{ formatSource(etaPrediction.location_source) }}
-                </strong>
+                <strong>{{ formatSource(etaPrediction.location_source) }}</strong>
               </span>
 
               <span
@@ -330,23 +384,7 @@
 
               <span v-if="etaPrediction.straight_distance_km !== undefined">
                 Straight Distance:
-                <strong>
-                  {{ etaPrediction.straight_distance_km }} km
-                </strong>
-              </span>
-
-              <span
-                v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined"
-                class="hidden sm:inline"
-              >
-                •
-              </span>
-
-              <span v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined">
-                Location Age:
-                <strong>
-                  {{ etaPrediction.location_age_minutes }} min
-                </strong>
+                <strong>{{ etaPrediction.straight_distance_km }} km</strong>
               </span>
             </div>
 
@@ -357,9 +395,10 @@
 
           <div
             v-if="etaPrediction.reasons && etaPrediction.reasons.length"
-            class="bg-white rounded-xl p-3 shadow-sm"
+            class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100"
           >
             <p class="font-semibold text-sm text-gray-800 mb-2">AI Reasoning</p>
+
             <ul class="space-y-1 text-xs text-gray-600">
               <li
                 v-for="(reason, index) in etaPrediction.reasons"
@@ -375,21 +414,32 @@
       </div>
 
       <!-- RIDE DETAILS -->
-      <div class="bg-gray-50 rounded-2xl p-4 mb-4">
+      <div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
         <h3 class="font-bold mb-3">Ride Details</h3>
 
-        <div class="space-y-3 text-sm">
-          <div>
-            <p class="text-gray-400 text-xs">Pickup</p>
-            <p class="font-semibold">{{ fromLocation || 'Loading pickup...' }}</p>
+        <div class="space-y-4 text-sm">
+          <div class="flex gap-3">
+            <div class="flex flex-col items-center">
+              <span class="w-4 h-4 rounded-full bg-green-600"></span>
+              <span class="w-px h-10 bg-gray-300"></span>
+            </div>
+            <div>
+              <p class="text-gray-400 text-xs">Pickup</p>
+              <p class="font-semibold">{{ fromLocation || 'Loading pickup...' }}</p>
+            </div>
           </div>
 
-          <div>
-            <p class="text-gray-400 text-xs">Drop</p>
-            <p class="font-semibold">{{ toLocation || 'Hourly Ride / Not available' }}</p>
+          <div class="flex gap-3">
+            <div class="flex flex-col items-center">
+              <span class="w-4 h-4 rounded-full bg-red-600"></span>
+            </div>
+            <div>
+              <p class="text-gray-400 text-xs">Drop</p>
+              <p class="font-semibold">{{ toLocation || 'Hourly Ride / Not available' }}</p>
+            </div>
           </div>
 
-          <div v-if="hasValidPickupLocation">
+          <div v-if="hasValidPickupLocation" class="bg-gray-50 rounded-2xl p-3">
             <p class="text-gray-400 text-xs">Pickup Coordinates</p>
             <p class="font-semibold">
               Lat: {{ pickupLat.toFixed(6) }},
@@ -397,7 +447,7 @@
             </p>
           </div>
 
-          <div v-else>
+          <div v-else class="bg-yellow-50 rounded-2xl p-3">
             <p class="text-gray-400 text-xs">Pickup Coordinates</p>
             <p class="font-semibold text-yellow-700">
               Missing. System will try to generate coordinates from pickup text.
@@ -407,7 +457,7 @@
       </div>
 
       <!-- DRIVER CURRENT LOCATION -->
-      <div v-if="hasValidDriverLocation" class="bg-blue-50 rounded-2xl p-4 mb-4 text-sm">
+      <div v-if="hasValidDriverLocation" class="bg-blue-50 rounded-3xl p-4 mb-4 text-sm border border-blue-100">
         <p class="font-semibold text-[#0693E3] mb-1">Driver Current Location</p>
         <p class="text-gray-600">
           Lat: {{ driverLocation.lat.toFixed(6) }},
@@ -415,8 +465,45 @@
         </p>
       </div>
 
-      <div v-else class="bg-yellow-50 rounded-2xl p-4 mb-4 text-sm text-yellow-700">
+      <div v-else class="bg-yellow-50 rounded-3xl p-4 mb-4 text-sm text-yellow-700 border border-yellow-100">
         Waiting for driver to start sharing location...
+      </div>
+    </div>
+
+    <!-- DRIVER ARRIVED POPUP -->
+    <div
+      v-if="showDriverArrivedPopup"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] px-4"
+    >
+      <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full text-center">
+        <div class="w-16 h-16 bg-green-100 text-green-700 rounded-full mx-auto flex items-center justify-center text-3xl font-bold mb-4">
+          ✓
+        </div>
+
+        <h2 class="text-xl font-bold text-gray-900 mb-2">
+          Driver Reached Pickup Location
+        </h2>
+
+        <p class="text-sm text-gray-600 mb-5">
+          Driver successfully arrived at the pickup location. Please contact your driver.
+        </p>
+
+        <div class="flex gap-3 justify-center">
+          <a
+            v-if="driverContact"
+            :href="`tel:${driverContact}`"
+            class="bg-green-600 text-white px-5 py-2 rounded-xl text-sm font-semibold"
+          >
+            Call Driver
+          </a>
+
+          <button
+            @click="showDriverArrivedPopup = false"
+            class="bg-gray-200 text-gray-700 px-5 py-2 rounded-xl text-sm font-semibold"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -463,23 +550,28 @@ const etaLastUpdated = ref('');
 
 const demoMode = ref(false);
 const demoMoving = ref(false);
-const demoStep = ref(0);
+const showDriverArrivedPopup = ref(false);
+const demoRoutePoints = ref([]);
+const demoCurrentPointIndex = ref(0);
 
 let demoInterval = null;
+
+const DEMO_STEP_INTERVAL_MS = 10000;
 
 const googleMapKey = config.public.gmapKey;
 
 const officeLocation = ref({
-  lat: toNumberOrNull(route.query.office_lat) || 34.0012,
-  lng: toNumberOrNull(route.query.office_lng) || 71.5249
+  lat: toNumberOrNull(route.query.office_lat) || 34.0008965,
+  lng: toNumberOrNull(route.query.office_lng) || 71.4986689
 });
-
 const mapCenter = ref({
   lat: officeLocation.value.lat,
   lng: officeLocation.value.lng
 });
 
 const driverLocation = ref(null);
+const driverLocationSource = ref('');
+
 const lastUpdate = ref('');
 const showShareModal = ref(false);
 
@@ -496,22 +588,11 @@ const driverMarkerIcon = createMarkerIcon('#DC2626', 'D');
 const pickupMarkerIcon = createMarkerIcon('#16A34A', 'P');
 
 const hasValidDriverLocation = computed(() => {
-  return (
-    driverLocation.value &&
-    typeof driverLocation.value.lat === 'number' &&
-    typeof driverLocation.value.lng === 'number' &&
-    !Number.isNaN(driverLocation.value.lat) &&
-    !Number.isNaN(driverLocation.value.lng)
-  );
+  return isValidLatLngPair(driverLocation.value?.lat, driverLocation.value?.lng);
 });
 
 const hasValidPickupLocation = computed(() => {
-  return (
-    typeof pickupLat.value === 'number' &&
-    typeof pickupLng.value === 'number' &&
-    !Number.isNaN(pickupLat.value) &&
-    !Number.isNaN(pickupLng.value)
-  );
+  return isValidLatLngPair(pickupLat.value, pickupLng.value);
 });
 
 const markerKey = computed(() => {
@@ -553,6 +634,10 @@ const pickupMarkerOptions = computed(() => {
 const etaStatusClass = computed(() => {
   const status = etaPrediction.value?.status;
 
+  if (status === 'arrived') {
+    return 'bg-green-600 text-white';
+  }
+
   if (status === 'nearby') {
     return 'bg-green-100 text-green-700';
   }
@@ -570,10 +655,10 @@ const safetyUrl = computed(() => {
 
 function createMarkerIcon(color, label) {
   const svg = `
-    <svg width="48" height="58" viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M24 0C10.745 0 0 10.745 0 24C0 42 24 58 24 58C24 58 48 42 48 24C48 10.745 37.255 0 24 0Z" fill="${color}"/>
-      <circle cx="24" cy="24" r="14" fill="white" fill-opacity="0.18"/>
-      <text x="24" y="30" text-anchor="middle" font-size="18" font-family="Arial" font-weight="700" fill="white">${label}</text>
+    <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 0C7.61 0 0 7.61 0 17C0 29.75 17 42 17 42C17 42 34 29.75 34 17C34 7.61 26.39 0 17 0Z" fill="${color}"/>
+      <circle cx="17" cy="17" r="10" fill="white" fill-opacity="0.18"/>
+      <text x="17" y="22" text-anchor="middle" font-size="13" font-family="Arial" font-weight="700" fill="white">${label}</text>
     </svg>
   `;
 
@@ -582,6 +667,25 @@ function createMarkerIcon(color, label) {
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString();
+}
+
+function formatEtaDuration(minutes) {
+  const totalSeconds = Math.max(0, Math.round(Number(minutes || 0) * 60));
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const remainingAfterHours = totalSeconds % 3600;
+  const mins = Math.floor(remainingAfterHours / 60);
+  const seconds = remainingAfterHours % 60;
+
+  if (hours > 0) {
+    return `${hours} hr ${mins} min ${seconds} sec`;
+  }
+
+  if (mins > 0) {
+    return `${mins} min ${seconds} sec`;
+  }
+
+  return `${seconds} sec`;
 }
 
 function formatSource(source) {
@@ -604,6 +708,62 @@ function toNumberOrNull(value) {
   }
 
   return numberValue;
+}
+
+function isValidLatLngPair(lat, lng) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return false;
+  }
+
+  if (latitude < -90 || latitude > 90) {
+    return false;
+  }
+
+  if (longitude < -180 || longitude > 180) {
+    return false;
+  }
+
+  if (latitude === 0 && longitude === 0) {
+    return false;
+  }
+
+  return true;
+}
+
+function safeSetDriverLocation(lat, lng, source = 'unknown') {
+  const latitude = toNumberOrNull(lat);
+  const longitude = toNumberOrNull(lng);
+
+  if (!isValidLatLngPair(latitude, longitude)) {
+    return false;
+  }
+
+  driverLocation.value = {
+    lat: latitude,
+    lng: longitude
+  };
+
+  driverLocationSource.value = source;
+
+  mapCenter.value = {
+    lat: latitude,
+    lng: longitude
+  };
+
+  return true;
+}
+
+function resetDriverToOffice() {
+  safeSetDriverLocation(
+    officeLocation.value.lat,
+    officeLocation.value.lng,
+    'office_default'
+  );
+
+  lastUpdate.value = `${formatTime(new Date())} (office location)`;
 }
 
 function getFirstValue(object, keys) {
@@ -667,16 +827,9 @@ function saveCurrentLocationOffline(position) {
 
   saveOfflineLocations(locations);
 
-  driverLocation.value = { lat, lng };
-  mapCenter.value = { lat, lng };
-  lastUpdate.value = `${formatTime(new Date())} (offline saved)`;
+  safeSetDriverLocation(lat, lng, 'offline_gps');
 
-  console.log('Offline location saved:', {
-    booking_id: bookingId.value,
-    driver_id: driverId.value || 1,
-    latitude: lat,
-    longitude: lng
-  });
+  lastUpdate.value = `${formatTime(new Date())} (offline saved)`;
 }
 
 function saveTestOfflineLocation() {
@@ -685,8 +838,13 @@ function saveTestOfflineLocation() {
     return;
   }
 
-  const lat = driverLocation.value?.lat || mapCenter.value.lat;
-  const lng = driverLocation.value?.lng || mapCenter.value.lng;
+  const lat = hasValidDriverLocation.value
+    ? driverLocation.value.lat
+    : officeLocation.value.lat;
+
+  const lng = hasValidDriverLocation.value
+    ? driverLocation.value.lng
+    : officeLocation.value.lng;
 
   const locations = getOfflineLocations();
 
@@ -701,11 +859,9 @@ function saveTestOfflineLocation() {
 
   saveOfflineLocations(locations);
 
-  driverLocation.value = { lat, lng };
-  mapCenter.value = { lat, lng };
-  lastUpdate.value = `${formatTime(new Date())} (test offline saved)`;
+  safeSetDriverLocation(lat, lng, 'test_offline');
 
-  console.log('Test offline location saved');
+  lastUpdate.value = `${formatTime(new Date())} (test offline saved)`;
 }
 
 function startOfflineGpsTracking() {
@@ -758,7 +914,6 @@ async function syncOfflineLocations() {
   const locations = getOfflineLocations();
 
   if (!locations.length) {
-    console.log('No offline locations to sync');
     return;
   }
 
@@ -771,7 +926,6 @@ async function syncOfflineLocations() {
     });
 
     if (res.success) {
-      console.log('Offline locations synced:', res);
       clearOfflineLocations();
       await fetchLatestLocation();
       await fetchAiEta();
@@ -845,12 +999,8 @@ async function fetchBookingStatus() {
         ])
       );
 
-      if (bookingPickupLat !== null) {
+      if (isValidLatLngPair(bookingPickupLat, bookingPickupLng)) {
         pickupLat.value = bookingPickupLat;
-        pickupCoordinateSource.value = 'booking_record';
-      }
-
-      if (bookingPickupLng !== null) {
         pickupLng.value = bookingPickupLng;
         pickupCoordinateSource.value = 'booking_record';
       }
@@ -930,51 +1080,81 @@ async function geocodePickupFromText() {
     return;
   }
 
-  if (!googleMapKey) {
-    etaError.value = 'Google Map key missing. Cannot find pickup coordinates.';
+  if (typeof window === 'undefined') {
     return;
   }
 
   try {
     pickupGeoLoading.value = true;
+    etaError.value = '';
 
-    const query = `${fromLocation.value}, Pakistan`;
+    const pickupQuery = `${fromLocation.value}, Peshawar, Pakistan`;
 
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleMapKey}`
-    );
+    console.log('Trying pickup geocode:', pickupQuery);
 
-    const data = await response.json();
+    await waitForGoogleMaps();
 
-    if (data.status === 'OK' && data.results?.length) {
-      const location = data.results[0].geometry.location;
+    const geocoder = new window.google.maps.Geocoder();
 
-      pickupLat.value = Number(location.lat);
-      pickupLng.value = Number(location.lng);
-      pickupCoordinateSource.value = 'google_geocoding';
+    const result = await new Promise((resolve, reject) => {
+      geocoder.geocode(
+        {
+          address: pickupQuery
+        },
+        (results, status) => {
+          if (status === 'OK' && results && results.length) {
+            resolve(results[0]);
+          } else {
+            reject(new Error(`Geocoding failed: ${status}`));
+          }
+        }
+      );
+    });
 
-      mapCenter.value = {
-        lat: pickupLat.value,
-        lng: pickupLng.value
-      };
+    const location = result.geometry.location;
 
-      console.log('Pickup geocoded:', {
-        pickup_lat: pickupLat.value,
-        pickup_lng: pickupLng.value,
-        address: data.results[0].formatted_address
-      });
+    pickupLat.value = Number(location.lat());
+    pickupLng.value = Number(location.lng());
+    pickupCoordinateSource.value = 'google_maps_geocoder';
 
-      return;
-    }
+    mapCenter.value = {
+      lat: pickupLat.value,
+      lng: pickupLng.value
+    };
 
-    console.log('Pickup geocoding failed:', data);
-    etaError.value = 'Pickup location found as text, but coordinates could not be generated.';
+    console.log('Pickup geocoded successfully:', {
+      address: result.formatted_address,
+      pickup_lat: pickupLat.value,
+      pickup_lng: pickupLng.value
+    });
   } catch (error) {
     console.log('Pickup Geocoding Error:', error);
-    etaError.value = 'Failed to generate pickup coordinates from location text.';
+
+    etaError.value =
+      'Pickup location text was found, but coordinates could not be generated. Add pickup_lat and pickup_lng to booking data.';
   } finally {
     pickupGeoLoading.value = false;
   }
+}
+
+function waitForGoogleMaps() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+
+    const interval = setInterval(() => {
+      attempts += 1;
+
+      if (window.google && window.google.maps && window.google.maps.Geocoder) {
+        clearInterval(interval);
+        resolve();
+      }
+
+      if (attempts >= 30) {
+        clearInterval(interval);
+        reject(new Error('Google Maps JavaScript API not loaded'));
+      }
+    }, 300);
+  });
 }
 
 async function fetchLatestLocation() {
@@ -1015,14 +1195,23 @@ async function fetchLatestLocation() {
           '';
       }
 
-      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-        driverLocation.value = { lat, lng };
-        mapCenter.value = { lat, lng };
+      const didSetLocation = safeSetDriverLocation(lat, lng, 'database');
+
+      if (didSetLocation) {
         lastUpdate.value = formatTime(new Date());
+        return;
       }
+    }
+
+    if (!hasValidDriverLocation.value) {
+      resetDriverToOffice();
     }
   } catch (error) {
     console.log('Location Error:', error);
+
+    if (!hasValidDriverLocation.value) {
+      resetDriverToOffice();
+    }
   }
 }
 
@@ -1053,6 +1242,10 @@ async function fetchAiEta() {
     return;
   }
 
+  if (!hasValidDriverLocation.value) {
+    resetDriverToOffice();
+  }
+
   try {
     etaLoading.value = true;
 
@@ -1060,13 +1253,11 @@ async function fetchAiEta() {
       booking_id: Number(bookingId.value) || bookingId.value,
       driver_id: Number(driverId.value) || driverId.value,
       pickup_lat: pickupLat.value,
-      pickup_lng: pickupLng.value
+      pickup_lng: pickupLng.value,
+      driver_lat: driverLocation.value.lat,
+      driver_lng: driverLocation.value.lng,
+      demo_mode: demoMode.value
     };
-
-    if (hasValidDriverLocation.value) {
-      body.driver_lat = driverLocation.value.lat;
-      body.driver_lng = driverLocation.value.lng;
-    }
 
     console.log('AI ETA Request Body:', body);
 
@@ -1081,21 +1272,22 @@ async function fetchAiEta() {
       etaPrediction.value = res;
       etaLastUpdated.value = formatTime(new Date());
 
-      if (res.driver_location && !demoMoving.value) {
-        const lat = Number(res.driver_location.latitude);
-        const lng = Number(res.driver_location.longitude);
+      if (res.driver_location_source) {
+        driverLocationSource.value = res.driver_location_source;
+      }
 
-        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-          driverLocation.value = { lat, lng };
-          mapCenter.value = { lat, lng };
-        }
+      if (res.status === 'arrived') {
+        showDriverArrivedPopup.value = true;
       }
     } else {
       etaError.value = res.message || 'Unable to generate ETA prediction.';
     }
   } catch (error) {
     console.log('AI ETA Error:', error);
-    etaError.value = error?.data?.message || error?.message || 'AI ETA prediction failed.';
+    etaError.value =
+      error?.data?.message ||
+      error?.message ||
+      'AI ETA prediction failed.';
   } finally {
     etaLoading.value = false;
   }
@@ -1103,6 +1295,7 @@ async function fetchAiEta() {
 
 async function startDemoMovement() {
   etaError.value = '';
+  showDriverArrivedPopup.value = false;
 
   if (!bookingId.value) {
     etaError.value = 'Booking ID is missing. Demo movement cannot start.';
@@ -1125,65 +1318,130 @@ async function startDemoMovement() {
 
   demoMode.value = true;
   demoMoving.value = true;
-  demoStep.value = 0;
+  demoCurrentPointIndex.value = 0;
+  demoRoutePoints.value = [];
 
-  const startLat = hasValidDriverLocation.value
-    ? driverLocation.value.lat
-    : officeLocation.value.lat;
+  resetDriverToOffice();
 
-  const startLng = hasValidDriverLocation.value
-    ? driverLocation.value.lng
-    : officeLocation.value.lng;
+  const startLat = officeLocation.value.lat;
+  const startLng = officeLocation.value.lng;
 
-  driverLocation.value = {
-    lat: startLat,
-    lng: startLng
-  };
+  try {
+    await buildDemoRoutePoints(startLat, startLng);
 
-  mapCenter.value = {
-    lat: startLat,
-    lng: startLng
-  };
+    if (!demoRoutePoints.value.length) {
+      etaError.value = 'Unable to generate demo route points.';
+      stopDemoMovement();
+      return;
+    }
 
-  if (demoInterval) {
-    clearInterval(demoInterval);
+    await moveDriverAlongRoute();
+
+    if (demoInterval) {
+      clearInterval(demoInterval);
+    }
+
+    demoInterval = setInterval(() => {
+      moveDriverAlongRoute();
+    }, DEMO_STEP_INTERVAL_MS);
+  } catch (error) {
+    console.log('Demo movement error:', error);
+    etaError.value = 'Demo movement failed. Fallback movement started.';
+
+    buildFallbackRoutePoints(startLat, startLng);
+    await moveDriverAlongRoute();
+
+    demoInterval = setInterval(() => {
+      moveDriverAlongRoute();
+    }, DEMO_STEP_INTERVAL_MS);
   }
-
-  await moveDriverOneStep(startLat, startLng);
-
-  demoInterval = setInterval(() => {
-    moveDriverOneStep(startLat, startLng);
-  }, 10000);
 }
 
-async function moveDriverOneStep(startLat, startLng) {
-  if (!hasValidPickupLocation.value) return;
+async function buildDemoRoutePoints(startLat, startLng) {
+  await waitForGoogleMaps();
 
-  demoStep.value += 1;
+  const directionsService = new window.google.maps.DirectionsService();
 
+  const routeResult = await new Promise((resolve, reject) => {
+    directionsService.route(
+      {
+        origin: {
+          lat: startLat,
+          lng: startLng
+        },
+        destination: {
+          lat: pickupLat.value,
+          lng: pickupLng.value
+        },
+        travelMode: window.google.maps.TravelMode.DRIVING
+      },
+      (result, status) => {
+        if (status === 'OK' && result?.routes?.length) {
+          resolve(result.routes[0]);
+        } else {
+          reject(new Error(`Directions failed: ${status}`));
+        }
+      }
+    );
+  });
+
+  const path = routeResult.overview_path || [];
+
+  demoRoutePoints.value = path.map((point) => ({
+    lat: Number(point.lat()),
+    lng: Number(point.lng())
+  }));
+
+  if (!demoRoutePoints.value.length) {
+    buildFallbackRoutePoints(startLat, startLng);
+  }
+
+  console.log('Demo route points generated:', demoRoutePoints.value.length);
+}
+
+function buildFallbackRoutePoints(startLat, startLng) {
+  const points = [];
   const totalSteps = 12;
-  const progress = Math.min(demoStep.value / totalSteps, 1);
 
-  const nextLat = startLat + (pickupLat.value - startLat) * progress;
-  const nextLng = startLng + (pickupLng.value - startLng) * progress;
+  for (let index = 0; index <= totalSteps; index += 1) {
+    const progress = index / totalSteps;
 
-  driverLocation.value = {
-    lat: Number(nextLat.toFixed(6)),
-    lng: Number(nextLng.toFixed(6))
-  };
+    points.push({
+      lat: Number((startLat + (pickupLat.value - startLat) * progress).toFixed(6)),
+      lng: Number((startLng + (pickupLng.value - startLng) * progress).toFixed(6))
+    });
+  }
 
-  mapCenter.value = {
-    lat: driverLocation.value.lat,
-    lng: driverLocation.value.lng
-  };
+  demoRoutePoints.value = points;
+}
 
-  lastUpdate.value = `${formatTime(new Date())} (demo movement)`;
+async function moveDriverAlongRoute() {
+  if (!demoMoving.value || !demoRoutePoints.value.length) {
+    return;
+  }
+
+  const totalPoints = demoRoutePoints.value.length;
+  const currentIndex = Math.min(demoCurrentPointIndex.value, totalPoints - 1);
+  const point = demoRoutePoints.value[currentIndex];
+
+  safeSetDriverLocation(point.lat, point.lng, 'demo_movement');
+
+  lastUpdate.value = `${formatTime(new Date())} (driver moving)`;
 
   await fetchAiEta();
 
-  if (progress >= 1) {
+  const nextIndex = currentIndex + Math.max(1, Math.ceil(totalPoints / 12));
+  demoCurrentPointIndex.value = nextIndex;
+
+  if (nextIndex >= totalPoints) {
+    safeSetDriverLocation(pickupLat.value, pickupLng.value, 'arrived_pickup');
+
+    await fetchAiEta();
+
     stopDemoMovement();
+
     lastUpdate.value = `${formatTime(new Date())} (driver reached pickup)`;
+    showDriverArrivedPopup.value = true;
   }
 }
 
@@ -1202,6 +1460,8 @@ onMounted(async () => {
 
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
+
+  resetDriverToOffice();
 
   await fetchBookingStatus();
 
