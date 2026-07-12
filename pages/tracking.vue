@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- HEADER -->
     <div class="bg-[#0693E3] text-white px-4 py-4 flex items-center justify-between">
       <div>
         <h1 class="font-bold text-lg">Live Ride Tracking</h1>
@@ -29,6 +30,7 @@
       </div>
     </div>
 
+    <!-- MAP -->
     <div class="relative">
       <GoogleMap
         :api-key="googleMapKey"
@@ -37,14 +39,14 @@
         class="w-full"
         style="height: 60vh;"
       >
-        <!-- Driver marker -->
+        <!-- Red driver marker -->
         <Marker
           v-if="hasValidDriverLocation"
           :key="markerKey"
           :options="markerOptions"
         />
 
-        <!-- Pickup marker -->
+        <!-- Green pickup marker -->
         <Marker
           v-if="hasValidPickupLocation"
           :key="pickupMarkerKey"
@@ -81,7 +83,9 @@
       </div>
     </div>
 
+    <!-- CONTENT -->
     <div class="bg-white rounded-t-3xl -mt-4 relative z-10 px-4 pt-6 pb-8 shadow-lg">
+      <!-- OFFLINE ALERT -->
       <div
         v-if="!isOnline"
         class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 text-sm text-red-700"
@@ -104,16 +108,16 @@
         </button>
       </div>
 
-      <!-- DRIVER DETAILS -->
+      <!-- DRIVER DETAILS CARD -->
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
           <div class="bg-[#0693E3] rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
             <img v-if="driverImage" :src="driverImage" class="w-full h-full object-cover" />
             <span v-else>{{ driverName ? driverName[0] : '?' }}</span>
           </div>
 
           <div class="flex-1">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <p class="font-bold text-xl">{{ driverName || 'Assigning Driver...' }}</p>
               <span
                 v-if="driverVerified == 1"
@@ -125,7 +129,7 @@
 
             <p class="text-gray-500 text-sm">{{ driverContact || 'Please wait' }}</p>
 
-            <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+            <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
               <span>⭐ {{ driverRating || '5.0' }}</span>
               <span>•</span>
               <span>{{ driverTotalRides || 0 }} rides</span>
@@ -133,7 +137,7 @@
               <span>{{ driverExperience || 0 }} yrs exp</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs text-gray-600">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3 text-xs text-gray-600">
               <div>
                 <span class="text-gray-400">Driver ID:</span>
                 <span class="font-semibold ml-1">{{ driverId || 'N/A' }}</span>
@@ -158,10 +162,15 @@
                 <span class="text-gray-400">Vehicle No:</span>
                 <span class="font-semibold ml-1">{{ vehicleNumber || 'N/A' }}</span>
               </div>
+
+              <div>
+                <span class="text-gray-400">Driver Source:</span>
+                <span class="font-semibold ml-1">{{ driverId ? 'Assigned' : 'Pending' }}</span>
+              </div>
             </div>
           </div>
 
-          <div v-if="driverContact" class="flex flex-col gap-2">
+          <div v-if="driverContact" class="flex md:flex-col gap-2">
             <a
               :href="`tel:${driverContact}`"
               class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold text-center"
@@ -180,7 +189,7 @@
 
       <!-- AI DRIVER ARRIVAL ETA CARD -->
       <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 rounded-2xl p-4 mb-4">
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-3">
           <div>
             <h3 class="font-bold text-gray-900">AI Driver Arrival ETA</h3>
             <p class="text-xs text-gray-500">
@@ -188,6 +197,14 @@
             </p>
             <p class="text-[11px] text-blue-600 mt-1">
               This predicts when the driver will reach pickup point, not full pickup-to-drop trip duration.
+            </p>
+
+            <p v-if="pickupGeoLoading" class="text-[11px] text-blue-700 mt-1 font-semibold">
+              Finding pickup coordinates from location name...
+            </p>
+
+            <p v-if="pickupCoordinateSource" class="text-[11px] text-green-700 mt-1 font-semibold">
+              Pickup coordinates source: {{ formatSource(pickupCoordinateSource) }}
             </p>
 
             <p v-if="demoMode" class="text-[11px] text-green-700 mt-1 font-semibold">
@@ -206,7 +223,7 @@
 
             <button
               @click="startDemoMovement"
-              :disabled="demoMoving || !hasValidPickupLocation"
+              :disabled="demoMoving || !bookingId"
               class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ demoMoving ? 'Moving...' : 'Start Demo Movement' }}
@@ -379,9 +396,17 @@
               Lng: {{ pickupLng.toFixed(6) }}
             </p>
           </div>
+
+          <div v-else>
+            <p class="text-gray-400 text-xs">Pickup Coordinates</p>
+            <p class="font-semibold text-yellow-700">
+              Missing. System will try to generate coordinates from pickup text.
+            </p>
+          </div>
         </div>
       </div>
 
+      <!-- DRIVER CURRENT LOCATION -->
       <div v-if="hasValidDriverLocation" class="bg-blue-50 rounded-2xl p-4 mb-4 text-sm">
         <p class="font-semibold text-[#0693E3] mb-1">Driver Current Location</p>
         <p class="text-gray-600">
@@ -414,6 +439,9 @@ const customerId = ref('');
 const pickupLat = ref(toNumberOrNull(route.query.pickup_lat));
 const pickupLng = ref(toNumberOrNull(route.query.pickup_lng));
 
+const pickupCoordinateSource = ref('');
+const pickupGeoLoading = ref(false);
+
 const driverId = ref('');
 const driverName = ref('');
 const driverContact = ref('');
@@ -439,16 +467,16 @@ const demoStep = ref(0);
 
 let demoInterval = null;
 
-const officeLocation = ref({
-  lat: 34.0012,
-  lng: 71.5249
-});
-
 const googleMapKey = config.public.gmapKey;
 
+const officeLocation = ref({
+  lat: toNumberOrNull(route.query.office_lat) || 34.0012,
+  lng: toNumberOrNull(route.query.office_lng) || 71.5249
+});
+
 const mapCenter = ref({
-  lat: 34.0012,
-  lng: 71.5249
+  lat: officeLocation.value.lat,
+  lng: officeLocation.value.lng
 });
 
 const driverLocation = ref(null);
@@ -463,6 +491,9 @@ let etaInterval = null;
 let offlineGpsInterval = null;
 
 const OFFLINE_STORAGE_KEY = 'rsl_offline_locations';
+
+const driverMarkerIcon = createMarkerIcon('#DC2626', 'D');
+const pickupMarkerIcon = createMarkerIcon('#16A34A', 'P');
 
 const hasValidDriverLocation = computed(() => {
   return (
@@ -502,11 +533,7 @@ const markerOptions = computed(() => {
       lng: driverLocation.value.lng
     },
     title: 'Driver Current Location',
-    label: {
-      text: 'D',
-      color: 'white',
-      fontWeight: 'bold'
-    }
+    icon: driverMarkerIcon
   };
 });
 
@@ -519,11 +546,7 @@ const pickupMarkerOptions = computed(() => {
       lng: pickupLng.value
     },
     title: 'Pickup Location',
-    label: {
-      text: 'P',
-      color: 'white',
-      fontWeight: 'bold'
-    }
+    icon: pickupMarkerIcon
   };
 });
 
@@ -544,6 +567,18 @@ const etaStatusClass = computed(() => {
 const safetyUrl = computed(() => {
   return `/safety?booking_id=${bookingId.value}&customer_id=${customerId.value}&driver_id=${driverId.value}&driver_phone=${driverContact.value}`;
 });
+
+function createMarkerIcon(color, label) {
+  const svg = `
+    <svg width="48" height="58" viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 0C10.745 0 0 10.745 0 24C0 42 24 58 24 58C24 58 48 42 48 24C48 10.745 37.255 0 24 0Z" fill="${color}"/>
+      <circle cx="24" cy="24" r="14" fill="white" fill-opacity="0.18"/>
+      <text x="24" y="30" text-anchor="middle" font-size="18" font-family="Arial" font-weight="700" fill="white">${label}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString();
@@ -768,9 +803,23 @@ async function fetchBookingStatus() {
     console.log('Booking Status Response:', res);
 
     if (res.success && res.data) {
-      fromLocation.value = res.data.from_location || '';
-      toLocation.value = res.data.to_location || '';
-      customerId.value = res.data.customer_id || res.data.user_id || res.data.id || '';
+      fromLocation.value =
+        res.data.from_location ||
+        res.data.pickup_location ||
+        res.data.source_location ||
+        '';
+
+      toLocation.value =
+        res.data.to_location ||
+        res.data.drop_location ||
+        res.data.destination_location ||
+        '';
+
+      customerId.value =
+        res.data.customer_id ||
+        res.data.user_id ||
+        res.data.id ||
+        '';
 
       const bookingPickupLat = toNumberOrNull(
         getFirstValue(res.data, [
@@ -798,10 +847,16 @@ async function fetchBookingStatus() {
 
       if (bookingPickupLat !== null) {
         pickupLat.value = bookingPickupLat;
+        pickupCoordinateSource.value = 'booking_record';
       }
 
       if (bookingPickupLng !== null) {
         pickupLng.value = bookingPickupLng;
+        pickupCoordinateSource.value = 'booking_record';
+      }
+
+      if (!hasValidPickupLocation.value && fromLocation.value) {
+        await geocodePickupFromText();
       }
 
       if (hasValidPickupLocation.value && !hasValidDriverLocation.value) {
@@ -813,7 +868,12 @@ async function fetchBookingStatus() {
 
       if (res.data.driver) {
         driverId.value = res.data.driver.id || driverId.value || '';
-        driverName.value = res.data.driver.name || '';
+
+        driverName.value =
+          res.data.driver.name ||
+          res.data.driver.full_name ||
+          '';
+
         driverContact.value =
           res.data.driver.contact ||
           res.data.driver.phone ||
@@ -827,6 +887,7 @@ async function fetchBookingStatus() {
         driverVerified.value = res.data.driver.verified_status || '';
 
         driverEmail.value = res.data.driver.email || '';
+
         driverCnic.value =
           res.data.driver.cnic ||
           res.data.driver.cnic_number ||
@@ -839,6 +900,7 @@ async function fetchBookingStatus() {
           res.data.car?.title ||
           res.data.vehicle?.title ||
           res.data.car_type ||
+          res.data.vehicle_name ||
           '';
 
         vehicleNumber.value =
@@ -863,8 +925,64 @@ async function fetchBookingStatus() {
   }
 }
 
+async function geocodePickupFromText() {
+  if (!fromLocation.value || hasValidPickupLocation.value) {
+    return;
+  }
+
+  if (!googleMapKey) {
+    etaError.value = 'Google Map key missing. Cannot find pickup coordinates.';
+    return;
+  }
+
+  try {
+    pickupGeoLoading.value = true;
+
+    const query = `${fromLocation.value}, Pakistan`;
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleMapKey}`
+    );
+
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results?.length) {
+      const location = data.results[0].geometry.location;
+
+      pickupLat.value = Number(location.lat);
+      pickupLng.value = Number(location.lng);
+      pickupCoordinateSource.value = 'google_geocoding';
+
+      mapCenter.value = {
+        lat: pickupLat.value,
+        lng: pickupLng.value
+      };
+
+      console.log('Pickup geocoded:', {
+        pickup_lat: pickupLat.value,
+        pickup_lng: pickupLng.value,
+        address: data.results[0].formatted_address
+      });
+
+      return;
+    }
+
+    console.log('Pickup geocoding failed:', data);
+    etaError.value = 'Pickup location found as text, but coordinates could not be generated.';
+  } catch (error) {
+    console.log('Pickup Geocoding Error:', error);
+    etaError.value = 'Failed to generate pickup coordinates from location text.';
+  } finally {
+    pickupGeoLoading.value = false;
+  }
+}
+
 async function fetchLatestLocation() {
   if (!bookingId.value) return;
+
+  if (demoMoving.value) {
+    return;
+  }
 
   if (!navigator.onLine) {
     handleOffline();
@@ -927,6 +1045,10 @@ async function fetchAiEta() {
   }
 
   if (!hasValidPickupLocation.value) {
+    await geocodePickupFromText();
+  }
+
+  if (!hasValidPickupLocation.value) {
     etaError.value = 'Pickup coordinates are missing. ETA needs pickup latitude and longitude.';
     return;
   }
@@ -979,7 +1101,23 @@ async function fetchAiEta() {
   }
 }
 
-function startDemoMovement() {
+async function startDemoMovement() {
+  etaError.value = '';
+
+  if (!bookingId.value) {
+    etaError.value = 'Booking ID is missing. Demo movement cannot start.';
+    return;
+  }
+
+  if (!driverId.value) {
+    etaError.value = 'Driver is not assigned yet. Demo movement cannot start.';
+    return;
+  }
+
+  if (!hasValidPickupLocation.value) {
+    await geocodePickupFromText();
+  }
+
   if (!hasValidPickupLocation.value) {
     etaError.value = 'Pickup coordinates are missing. Demo movement cannot start.';
     return;
@@ -988,7 +1126,6 @@ function startDemoMovement() {
   demoMode.value = true;
   demoMoving.value = true;
   demoStep.value = 0;
-  etaError.value = '';
 
   const startLat = hasValidDriverLocation.value
     ? driverLocation.value.lat
@@ -1012,7 +1149,7 @@ function startDemoMovement() {
     clearInterval(demoInterval);
   }
 
-  moveDriverOneStep(startLat, startLng);
+  await moveDriverOneStep(startLat, startLng);
 
   demoInterval = setInterval(() => {
     moveDriverOneStep(startLat, startLng);
@@ -1078,10 +1215,10 @@ onMounted(async () => {
 
   trackingInterval = setInterval(async () => {
     if (navigator.onLine) {
-      await fetchLatestLocation();
       await fetchBookingStatus();
 
       if (!demoMoving.value) {
+        await fetchLatestLocation();
         await fetchAiEta();
       }
     } else {
