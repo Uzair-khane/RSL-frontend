@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-
     <div class="bg-[#0693E3] text-white px-4 py-4 flex items-center justify-between">
       <div>
         <h1 class="font-bold text-lg">Live Ride Tracking</h1>
@@ -38,10 +37,18 @@
         class="w-full"
         style="height: 60vh;"
       >
+        <!-- Driver marker -->
         <Marker
           v-if="hasValidDriverLocation"
           :key="markerKey"
           :options="markerOptions"
+        />
+
+        <!-- Pickup marker -->
+        <Marker
+          v-if="hasValidPickupLocation"
+          :key="pickupMarkerKey"
+          :options="pickupMarkerOptions"
         />
       </GoogleMap>
 
@@ -75,7 +82,6 @@
     </div>
 
     <div class="bg-white rounded-t-3xl -mt-4 relative z-10 px-4 pt-6 pb-8 shadow-lg">
-
       <div
         v-if="!isOnline"
         class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 text-sm text-red-700"
@@ -98,6 +104,7 @@
         </button>
       </div>
 
+      <!-- DRIVER DETAILS -->
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
         <div class="flex items-center gap-4">
           <div class="bg-[#0693E3] rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
@@ -125,36 +132,94 @@
               <span>•</span>
               <span>{{ driverExperience || 0 }} yrs exp</span>
             </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs text-gray-600">
+              <div>
+                <span class="text-gray-400">Driver ID:</span>
+                <span class="font-semibold ml-1">{{ driverId || 'N/A' }}</span>
+              </div>
+
+              <div>
+                <span class="text-gray-400">Email:</span>
+                <span class="font-semibold ml-1">{{ driverEmail || 'N/A' }}</span>
+              </div>
+
+              <div>
+                <span class="text-gray-400">CNIC:</span>
+                <span class="font-semibold ml-1">{{ driverCnic || 'N/A' }}</span>
+              </div>
+
+              <div>
+                <span class="text-gray-400">Vehicle:</span>
+                <span class="font-semibold ml-1">{{ vehicleTitle || 'N/A' }}</span>
+              </div>
+
+              <div>
+                <span class="text-gray-400">Vehicle No:</span>
+                <span class="font-semibold ml-1">{{ vehicleNumber || 'N/A' }}</span>
+              </div>
+            </div>
           </div>
 
           <div v-if="driverContact" class="flex flex-col gap-2">
-            <a :href="`tel:${driverContact}`" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold text-center">
+            <a
+              :href="`tel:${driverContact}`"
+              class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-semibold text-center"
+            >
               Call
             </a>
-            <a :href="`sms:${driverContact}`" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold text-center">
+            <a
+              :href="`sms:${driverContact}`"
+              class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold text-center"
+            >
               SMS
             </a>
           </div>
         </div>
       </div>
 
-      <!-- AI SMART ETA PREDICTION CARD -->
+      <!-- AI DRIVER ARRIVAL ETA CARD -->
       <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 rounded-2xl p-4 mb-4">
-        <div class="flex items-center justify-between gap-3 mb-3">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
           <div>
-            <h3 class="font-bold text-gray-900">AI Smart ETA Prediction</h3>
+            <h3 class="font-bold text-gray-900">AI Driver Arrival ETA</h3>
             <p class="text-xs text-gray-500">
-              Arrival estimate based on driver GPS and pickup location
+              Driver-to-pickup arrival estimate using Google Maps driving route.
+            </p>
+            <p class="text-[11px] text-blue-600 mt-1">
+              This predicts when the driver will reach pickup point, not full pickup-to-drop trip duration.
+            </p>
+
+            <p v-if="demoMode" class="text-[11px] text-green-700 mt-1 font-semibold">
+              Demo mode active: driver marker is moving toward pickup location.
             </p>
           </div>
 
-          <button
-            @click="fetchAiEta"
-            :disabled="etaLoading || !bookingId || !driverId"
-            class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ etaLoading ? 'Checking...' : 'Refresh ETA' }}
-          </button>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button
+              @click="fetchAiEta"
+              :disabled="etaLoading || !bookingId || !driverId"
+              class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ etaLoading ? 'Checking...' : 'Refresh ETA' }}
+            </button>
+
+            <button
+              @click="startDemoMovement"
+              :disabled="demoMoving || !hasValidPickupLocation"
+              class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ demoMoving ? 'Moving...' : 'Start Demo Movement' }}
+            </button>
+
+            <button
+              v-if="demoMoving"
+              @click="stopDemoMovement"
+              class="bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-semibold"
+            >
+              Stop
+            </button>
+          </div>
         </div>
 
         <div
@@ -188,7 +253,7 @@
             </div>
 
             <div class="bg-white rounded-xl p-3 shadow-sm">
-              <p class="text-xs text-gray-400">Distance</p>
+              <p class="text-xs text-gray-400">Driver to Pickup</p>
               <p class="text-2xl font-bold text-gray-900">
                 {{ etaPrediction.distance_km }} km
               </p>
@@ -224,13 +289,41 @@
               <span class="hidden sm:inline">•</span>
 
               <span>
-                Source:
-                <strong class="capitalize">
+                Route Source:
+                <strong>
+                  {{ formatSource(etaPrediction.eta_source) }}
+                </strong>
+              </span>
+
+              <span class="hidden sm:inline">•</span>
+
+              <span>
+                Location Source:
+                <strong>
                   {{ formatSource(etaPrediction.location_source) }}
                 </strong>
               </span>
 
-              <span v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined" class="hidden sm:inline">•</span>
+              <span
+                v-if="etaPrediction.straight_distance_km !== undefined"
+                class="hidden sm:inline"
+              >
+                •
+              </span>
+
+              <span v-if="etaPrediction.straight_distance_km !== undefined">
+                Straight Distance:
+                <strong>
+                  {{ etaPrediction.straight_distance_km }} km
+                </strong>
+              </span>
+
+              <span
+                v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined"
+                class="hidden sm:inline"
+              >
+                •
+              </span>
 
               <span v-if="etaPrediction.location_age_minutes !== null && etaPrediction.location_age_minutes !== undefined">
                 Location Age:
@@ -264,6 +357,7 @@
         </div>
       </div>
 
+      <!-- RIDE DETAILS -->
       <div class="bg-gray-50 rounded-2xl p-4 mb-4">
         <h3 class="font-bold mb-3">Ride Details</h3>
 
@@ -276,6 +370,14 @@
           <div>
             <p class="text-gray-400 text-xs">Drop</p>
             <p class="font-semibold">{{ toLocation || 'Hourly Ride / Not available' }}</p>
+          </div>
+
+          <div v-if="hasValidPickupLocation">
+            <p class="text-gray-400 text-xs">Pickup Coordinates</p>
+            <p class="font-semibold">
+              Lat: {{ pickupLat.toFixed(6) }},
+              Lng: {{ pickupLng.toFixed(6) }}
+            </p>
           </div>
         </div>
       </div>
@@ -292,7 +394,6 @@
         Waiting for driver to start sharing location...
       </div>
     </div>
-
   </div>
 </template>
 
@@ -310,8 +411,8 @@ const fromLocation = ref('');
 const toLocation = ref('');
 const customerId = ref('');
 
-const pickupLat = ref(null);
-const pickupLng = ref(null);
+const pickupLat = ref(toNumberOrNull(route.query.pickup_lat));
+const pickupLng = ref(toNumberOrNull(route.query.pickup_lng));
 
 const driverId = ref('');
 const driverName = ref('');
@@ -322,10 +423,26 @@ const driverTotalRides = ref('');
 const driverExperience = ref('');
 const driverVerified = ref('');
 
+const driverEmail = ref('');
+const driverCnic = ref('');
+const vehicleTitle = ref('');
+const vehicleNumber = ref('');
+
 const etaPrediction = ref(null);
 const etaLoading = ref(false);
 const etaError = ref('');
 const etaLastUpdated = ref('');
+
+const demoMode = ref(false);
+const demoMoving = ref(false);
+const demoStep = ref(0);
+
+let demoInterval = null;
+
+const officeLocation = ref({
+  lat: 34.0012,
+  lng: 71.5249
+});
 
 const googleMapKey = config.public.gmapKey;
 
@@ -357,9 +474,23 @@ const hasValidDriverLocation = computed(() => {
   );
 });
 
+const hasValidPickupLocation = computed(() => {
+  return (
+    typeof pickupLat.value === 'number' &&
+    typeof pickupLng.value === 'number' &&
+    !Number.isNaN(pickupLat.value) &&
+    !Number.isNaN(pickupLng.value)
+  );
+});
+
 const markerKey = computed(() => {
   if (!hasValidDriverLocation.value) return 'no-marker';
-  return `${driverLocation.value.lat}-${driverLocation.value.lng}`;
+  return `driver-${driverLocation.value.lat}-${driverLocation.value.lng}`;
+});
+
+const pickupMarkerKey = computed(() => {
+  if (!hasValidPickupLocation.value) return 'no-pickup-marker';
+  return `pickup-${pickupLat.value}-${pickupLng.value}`;
 });
 
 const markerOptions = computed(() => {
@@ -370,7 +501,29 @@ const markerOptions = computed(() => {
       lat: driverLocation.value.lat,
       lng: driverLocation.value.lng
     },
-    title: 'Driver Current Location'
+    title: 'Driver Current Location',
+    label: {
+      text: 'D',
+      color: 'white',
+      fontWeight: 'bold'
+    }
+  };
+});
+
+const pickupMarkerOptions = computed(() => {
+  if (!hasValidPickupLocation.value) return {};
+
+  return {
+    position: {
+      lat: pickupLat.value,
+      lng: pickupLng.value
+    },
+    title: 'Pickup Location',
+    label: {
+      text: 'P',
+      color: 'white',
+      fontWeight: 'bold'
+    }
   };
 });
 
@@ -399,10 +552,16 @@ function formatTime(date) {
 function formatSource(source) {
   if (!source) return 'Unknown';
 
-  return String(source).replace(/_/g, ' ');
+  return String(source)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function toNumberOrNull(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
   const numberValue = Number(value);
 
   if (Number.isNaN(numberValue)) {
@@ -507,6 +666,8 @@ function saveTestOfflineLocation() {
 
   saveOfflineLocations(locations);
 
+  driverLocation.value = { lat, lng };
+  mapCenter.value = { lat, lng };
   lastUpdate.value = `${formatTime(new Date())} (test offline saved)`;
 
   console.log('Test offline location saved');
@@ -604,12 +765,14 @@ async function fetchBookingStatus() {
   try {
     const res = await $useCustomFetch(`/api/site/v1/booking/status/${bookingId.value}`);
 
+    console.log('Booking Status Response:', res);
+
     if (res.success && res.data) {
       fromLocation.value = res.data.from_location || '';
       toLocation.value = res.data.to_location || '';
       customerId.value = res.data.customer_id || res.data.user_id || res.data.id || '';
 
-      pickupLat.value = toNumberOrNull(
+      const bookingPickupLat = toNumberOrNull(
         getFirstValue(res.data, [
           'pickup_lat',
           'pickupLat',
@@ -621,7 +784,7 @@ async function fetchBookingStatus() {
         ])
       );
 
-      pickupLng.value = toNumberOrNull(
+      const bookingPickupLng = toNumberOrNull(
         getFirstValue(res.data, [
           'pickup_lng',
           'pickupLng',
@@ -633,15 +796,58 @@ async function fetchBookingStatus() {
         ])
       );
 
+      if (bookingPickupLat !== null) {
+        pickupLat.value = bookingPickupLat;
+      }
+
+      if (bookingPickupLng !== null) {
+        pickupLng.value = bookingPickupLng;
+      }
+
+      if (hasValidPickupLocation.value && !hasValidDriverLocation.value) {
+        mapCenter.value = {
+          lat: pickupLat.value,
+          lng: pickupLng.value
+        };
+      }
+
       if (res.data.driver) {
         driverId.value = res.data.driver.id || driverId.value || '';
         driverName.value = res.data.driver.name || '';
-        driverContact.value = res.data.driver.contact || '';
+        driverContact.value =
+          res.data.driver.contact ||
+          res.data.driver.phone ||
+          res.data.driver.mobile ||
+          '';
+
         driverImage.value = res.data.driver.image || '';
         driverRating.value = res.data.driver.rating || '';
         driverTotalRides.value = res.data.driver.total_rides || '';
         driverExperience.value = res.data.driver.experience_years || '';
         driverVerified.value = res.data.driver.verified_status || '';
+
+        driverEmail.value = res.data.driver.email || '';
+        driverCnic.value =
+          res.data.driver.cnic ||
+          res.data.driver.cnic_number ||
+          res.data.driver.nic ||
+          '';
+
+        vehicleTitle.value =
+          res.data.driver.car?.title ||
+          res.data.driver.vehicle?.title ||
+          res.data.car?.title ||
+          res.data.vehicle?.title ||
+          res.data.car_type ||
+          '';
+
+        vehicleNumber.value =
+          res.data.driver.car?.registration_number ||
+          res.data.driver.vehicle?.registration_number ||
+          res.data.car?.registration_number ||
+          res.data.vehicle?.registration_number ||
+          res.data.vehicle_number ||
+          '';
       }
 
       if (!driverId.value) {
@@ -671,8 +877,17 @@ async function fetchLatestLocation() {
     console.log('Location API Response:', res);
 
     if (res.success && res.data) {
-      const lat = parseFloat(res.data.latitude);
-      const lng = parseFloat(res.data.longitude);
+      const lat = parseFloat(
+        res.data.latitude ||
+        res.data.lat ||
+        res.data.driver_lat
+      );
+
+      const lng = parseFloat(
+        res.data.longitude ||
+        res.data.lng ||
+        res.data.driver_lng
+      );
 
       if (!driverId.value) {
         driverId.value =
@@ -711,27 +926,48 @@ async function fetchAiEta() {
     return;
   }
 
+  if (!hasValidPickupLocation.value) {
+    etaError.value = 'Pickup coordinates are missing. ETA needs pickup latitude and longitude.';
+    return;
+  }
+
   try {
     etaLoading.value = true;
 
     const body = {
       booking_id: Number(bookingId.value) || bookingId.value,
-      driver_id: Number(driverId.value) || driverId.value
+      driver_id: Number(driverId.value) || driverId.value,
+      pickup_lat: pickupLat.value,
+      pickup_lng: pickupLng.value
     };
 
-    if (pickupLat.value !== null && pickupLng.value !== null) {
-      body.pickup_lat = pickupLat.value;
-      body.pickup_lng = pickupLng.value;
+    if (hasValidDriverLocation.value) {
+      body.driver_lat = driverLocation.value.lat;
+      body.driver_lng = driverLocation.value.lng;
     }
+
+    console.log('AI ETA Request Body:', body);
 
     const res = await $useCustomFetch('/api/site/v1/ai/predict-eta', {
       method: 'POST',
       body
     });
 
+    console.log('AI ETA Response:', res);
+
     if (res.success) {
       etaPrediction.value = res;
       etaLastUpdated.value = formatTime(new Date());
+
+      if (res.driver_location && !demoMoving.value) {
+        const lat = Number(res.driver_location.latitude);
+        const lng = Number(res.driver_location.longitude);
+
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          driverLocation.value = { lat, lng };
+          mapCenter.value = { lat, lng };
+        }
+      }
     } else {
       etaError.value = res.message || 'Unable to generate ETA prediction.';
     }
@@ -740,6 +976,86 @@ async function fetchAiEta() {
     etaError.value = error?.data?.message || error?.message || 'AI ETA prediction failed.';
   } finally {
     etaLoading.value = false;
+  }
+}
+
+function startDemoMovement() {
+  if (!hasValidPickupLocation.value) {
+    etaError.value = 'Pickup coordinates are missing. Demo movement cannot start.';
+    return;
+  }
+
+  demoMode.value = true;
+  demoMoving.value = true;
+  demoStep.value = 0;
+  etaError.value = '';
+
+  const startLat = hasValidDriverLocation.value
+    ? driverLocation.value.lat
+    : officeLocation.value.lat;
+
+  const startLng = hasValidDriverLocation.value
+    ? driverLocation.value.lng
+    : officeLocation.value.lng;
+
+  driverLocation.value = {
+    lat: startLat,
+    lng: startLng
+  };
+
+  mapCenter.value = {
+    lat: startLat,
+    lng: startLng
+  };
+
+  if (demoInterval) {
+    clearInterval(demoInterval);
+  }
+
+  moveDriverOneStep(startLat, startLng);
+
+  demoInterval = setInterval(() => {
+    moveDriverOneStep(startLat, startLng);
+  }, 10000);
+}
+
+async function moveDriverOneStep(startLat, startLng) {
+  if (!hasValidPickupLocation.value) return;
+
+  demoStep.value += 1;
+
+  const totalSteps = 12;
+  const progress = Math.min(demoStep.value / totalSteps, 1);
+
+  const nextLat = startLat + (pickupLat.value - startLat) * progress;
+  const nextLng = startLng + (pickupLng.value - startLng) * progress;
+
+  driverLocation.value = {
+    lat: Number(nextLat.toFixed(6)),
+    lng: Number(nextLng.toFixed(6))
+  };
+
+  mapCenter.value = {
+    lat: driverLocation.value.lat,
+    lng: driverLocation.value.lng
+  };
+
+  lastUpdate.value = `${formatTime(new Date())} (demo movement)`;
+
+  await fetchAiEta();
+
+  if (progress >= 1) {
+    stopDemoMovement();
+    lastUpdate.value = `${formatTime(new Date())} (driver reached pickup)`;
+  }
+}
+
+function stopDemoMovement() {
+  demoMoving.value = false;
+
+  if (demoInterval) {
+    clearInterval(demoInterval);
+    demoInterval = null;
   }
 }
 
@@ -764,21 +1080,26 @@ onMounted(async () => {
     if (navigator.onLine) {
       await fetchLatestLocation();
       await fetchBookingStatus();
+
+      if (!demoMoving.value) {
+        await fetchAiEta();
+      }
     } else {
       handleOffline();
     }
-  }, 3000);
+  }, 10000);
 
   etaInterval = setInterval(async () => {
-    if (navigator.onLine) {
+    if (navigator.onLine && !demoMoving.value) {
       await fetchAiEta();
     }
-  }, 15000);
+  }, 30000);
 });
 
 onBeforeUnmount(() => {
   if (trackingInterval) clearInterval(trackingInterval);
   if (etaInterval) clearInterval(etaInterval);
+  if (demoInterval) clearInterval(demoInterval);
 
   stopOfflineGpsTracking();
 
