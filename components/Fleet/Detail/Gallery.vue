@@ -21,7 +21,7 @@
             {{ currentImageIndex + 1 }} / {{ visibleGalleryImages.length }}
           </div>
 
-          <!-- Main Image (fully fills the card, edge to edge) -->
+          <!-- Main Image (fully covers the card, edge to edge, no white space) -->
           <div class="relative aspect-video w-full overflow-hidden md:h-[420px]">
             <img
               v-if="mainImage"
@@ -132,7 +132,7 @@
               v-if="displayImage"
               :src="getImageUrl(displayImage)"
               :alt="carDetail?.title || 'Car image'"
-              class="relative z-10 h-48 w-full object-cover"
+              class="relative z-10 h-48 w-full object-contain p-4"
               @error="handleImageError(displayImage)"
             />
 
