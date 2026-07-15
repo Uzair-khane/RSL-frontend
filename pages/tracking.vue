@@ -34,11 +34,12 @@
     </div>
 
     <!-- MAP -->
-    <div class="relative bg-gray-200">
+    <div ref="mapSectionRef" class="relative bg-gray-200">
       <GoogleMap
+        ref="trackingMapRef"
         :api-key="googleMapKey"
         :center="mapCenter"
-        :zoom="15"
+        :zoom="mapZoom"
         class="w-full"
         style="height: 60vh;"
       >
@@ -64,6 +65,14 @@
         <div class="flex items-center gap-2 mt-1">
           <span class="w-3 h-3 rounded-full bg-green-600"></span>
           <span>Pickup Point</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="w-3 h-3 rounded-full bg-[#0693E3]"></span>
+          <span>Recommended Route</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="w-3 h-3 rounded-full bg-green-600"></span>
+          <span>Selected Route</span>
         </div>
       </div>
 
@@ -412,387 +421,388 @@
           </div>
         </div>
       </div>
-<!-- AI ROUTE OPTIMIZATION + DEVIATION CARD -->
-<div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
-  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
-    <div>
-      <div class="flex items-center gap-2">
-        <span class="bg-[#0693E3] text-white text-xs font-bold px-2 py-1 rounded-full">
-          AI
-        </span>
 
-        <h3 class="font-bold text-gray-900">
-          Smart Route Intelligence
-        </h3>
+      <!-- AI ROUTE OPTIMIZATION + DEVIATION CARD -->
+      <div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="bg-[#0693E3] text-white text-xs font-bold px-2 py-1 rounded-full">
+                AI
+              </span>
 
-        <span
-          v-if="recommendedRoute"
-          class="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full font-bold"
-        >
-          Recommended: {{ recommendedRoute.route_id }}
-        </span>
-      </div>
+              <h3 class="font-bold text-gray-900">
+                Smart Route Intelligence
+              </h3>
 
-      <p class="text-xs text-gray-500 mt-1">
-        AI compares available pickup-to-drop routes, recommends the best one, and lets the driver select the final route.
-      </p>
+              <span
+                v-if="recommendedRoute"
+                class="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full font-bold"
+              >
+                Recommended: {{ recommendedRoute.route_id }}
+              </span>
+            </div>
 
-      <p v-if="dropGeoLoading" class="text-[11px] text-blue-700 mt-1 font-semibold">
-        Finding drop coordinates from location name...
-      </p>
+            <p class="text-xs text-gray-500 mt-1">
+              AI compares available pickup-to-drop routes, recommends the best one, and lets the driver select the final route.
+            </p>
 
-      <p v-if="dropCoordinateSource" class="text-[11px] text-green-700 mt-1 font-semibold">
-        Drop coordinates source: {{ formatSource(dropCoordinateSource) }}
-      </p>
-    </div>
+            <p v-if="dropGeoLoading" class="text-[11px] text-blue-700 mt-1 font-semibold">
+              Finding drop coordinates from location name...
+            </p>
 
-    <div class="flex flex-col sm:flex-row gap-2">
-      <button
-        @click="fetchRouteOptimization"
-        :disabled="routeLoading || !bookingId || !hasValidPickupLocation || !toLocation"
-        class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-      >
-        {{ routeLoading ? 'Optimizing...' : 'Optimize Routes' }}
-      </button>
+            <p v-if="dropCoordinateSource" class="text-[11px] text-green-700 mt-1 font-semibold">
+              Drop coordinates source: {{ formatSource(dropCoordinateSource) }}
+            </p>
+          </div>
 
-      <button
-        @click="fetchRouteDeviation"
-        :disabled="deviationLoading || !activeRoutePolyline || !hasValidDriverLocation"
-        class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-      >
-        {{ deviationLoading ? 'Checking...' : 'Check Deviation' }}
-      </button>
-    </div>
-  </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button
+              @click="fetchRouteOptimization"
+              :disabled="routeLoading || !bookingId || !hasValidPickupLocation || !toLocation"
+              class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {{ routeLoading ? 'Optimizing...' : 'Optimize Routes' }}
+            </button>
 
-  <div
-    v-if="routeError"
-    class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-3"
-  >
-    {{ routeError }}
-  </div>
+            <button
+              @click="fetchRouteDeviation"
+              :disabled="deviationLoading || !activeRoutePolyline || !hasValidDriverLocation"
+              class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {{ deviationLoading ? 'Checking...' : 'Check Deviation' }}
+            </button>
+          </div>
+        </div>
 
-  <div
-    v-if="deviationError"
-    class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm mb-3"
-  >
-    {{ deviationError }}
-  </div>
-
-  <div
-    v-if="!routeOptions.length && !routeLoading && !routeError"
-    class="bg-gray-50 border border-gray-100 rounded-2xl p-3 text-sm text-gray-600"
-  >
-    AI route options will appear after pickup and drop coordinates are available.
-  </div>
-
-  <div
-    v-if="routeLoading && !routeOptions.length"
-    class="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-sm text-blue-700"
-  >
-    Comparing available routes using traffic-aware AI route scoring...
-  </div>
-
-  <div v-if="routeOptions.length" class="space-y-4">
-    <!-- TOP SUMMARY -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="bg-blue-50 rounded-2xl p-3 border border-blue-100">
-        <p class="text-xs text-gray-500">Best Route</p>
-        <p class="font-bold text-gray-900 leading-snug">
-          {{ recommendedRoute?.summary || 'Recommended Route' }}
-        </p>
-      </div>
-
-      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-        <p class="text-xs text-gray-500">Trip Distance</p>
-        <p class="text-2xl font-bold text-gray-900">
-          {{ selectedRoute?.distance_km || recommendedRoute?.distance_km }} km
-        </p>
-      </div>
-
-      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-        <p class="text-xs text-gray-500">Traffic ETA</p>
-        <p class="text-2xl font-bold text-gray-900">
-          {{ selectedRoute?.duration_in_traffic_minutes || recommendedRoute?.duration_in_traffic_minutes }} min
-        </p>
-      </div>
-
-      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-        <p class="text-xs text-gray-500">Confidence</p>
-        <p class="text-2xl font-bold text-gray-900">
-          {{ selectedRoute?.confidence || recommendedRoute?.confidence }}%
-        </p>
-      </div>
-    </div>
-
-    <!-- ROUTE CHOICE CARDS -->
-    <div>
-      <div class="flex items-center justify-between gap-3 mb-2">
-        <p class="font-bold text-sm text-gray-900">
-          Driver Route Choices
-        </p>
-
-        <p class="text-[11px] text-gray-500">
-          System recommends. Driver makes final selection.
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div
-          v-for="routeItem in routeOptions"
-          :key="routeItem.route_id"
-          class="rounded-2xl border p-3 transition cursor-pointer"
-          :class="getRouteCardClass(routeItem)"
-          @click="selectDriverRoute(routeItem)"
+          v-if="routeError"
+          class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-3"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <p class="font-bold text-gray-900">
-                  Route {{ routeItem.rank }}
+          {{ routeError }}
+        </div>
+
+        <div
+          v-if="deviationError"
+          class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm mb-3"
+        >
+          {{ deviationError }}
+        </div>
+
+        <div
+          v-if="!routeOptions.length && !routeLoading && !routeError"
+          class="bg-gray-50 border border-gray-100 rounded-2xl p-3 text-sm text-gray-600"
+        >
+          AI route options will appear after pickup and drop coordinates are available.
+        </div>
+
+        <div
+          v-if="routeLoading && !routeOptions.length"
+          class="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-sm text-blue-700"
+        >
+          Comparing available routes using traffic-aware AI route scoring...
+        </div>
+
+        <div v-if="routeOptions.length" class="space-y-4">
+          <!-- TOP SUMMARY -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-blue-50 rounded-2xl p-3 border border-blue-100">
+              <p class="text-xs text-gray-500">Best Route</p>
+              <p class="font-bold text-gray-900 leading-snug">
+                {{ recommendedRoute?.summary || 'Recommended Route' }}
+              </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <p class="text-xs text-gray-500">Trip Distance</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ selectedRoute?.distance_km || recommendedRoute?.distance_km }} km
+              </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <p class="text-xs text-gray-500">Traffic ETA</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ selectedRoute?.duration_in_traffic_minutes || recommendedRoute?.duration_in_traffic_minutes }} min
+              </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <p class="text-xs text-gray-500">Confidence</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ selectedRoute?.confidence || recommendedRoute?.confidence }}%
+              </p>
+            </div>
+          </div>
+
+          <!-- ROUTE CHOICE CARDS -->
+          <div>
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <p class="font-bold text-sm text-gray-900">
+                Driver Route Choices
+              </p>
+
+              <p class="text-[11px] text-gray-500">
+                System recommends. Driver makes final selection.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div
+                v-for="routeItem in routeOptions"
+                :key="routeItem.route_id"
+                class="rounded-2xl border p-3 transition cursor-pointer"
+                :class="getRouteCardClass(routeItem)"
+                @click="handleRouteChoiceClick(routeItem)"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="font-bold text-gray-900">
+                        Route {{ routeItem.rank }}
+                      </p>
+
+                      <span
+                        v-if="routeItem.is_recommended"
+                        class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold"
+                      >
+                        Recommended
+                      </span>
+
+                      <span
+                        v-if="selectedRouteId === routeItem.route_id"
+                        class="bg-[#0693E3] text-white text-[10px] px-2 py-0.5 rounded-full font-bold"
+                      >
+                        Selected
+                      </span>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-1 line-clamp-2">
+                      {{ routeItem.summary || 'Google Maps Route' }}
+                    </p>
+                  </div>
+
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black"
+                    :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-100 text-gray-500'"
+                  >
+                    {{ routeItem.rank }}
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Distance</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeItem.distance_km }} km
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">ETA</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeItem.duration_in_traffic_minutes }} min
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Delay</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeItem.traffic_delay_minutes || 0 }} min
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Fare</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeItem.estimated_fare ? `Rs ${routeItem.estimated_fare}` : 'N/A' }}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  @click.stop="handleRouteChoiceClick(routeItem)"
+                  :disabled="selectingRouteId === routeItem.route_id"
+                  class="w-full mt-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-60"
+                  :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-900 text-white'"
+                >
+                  {{
+                    selectingRouteId === routeItem.route_id
+                      ? 'Saving...'
+                      : selectedRouteId === routeItem.route_id
+                        ? 'Active Route'
+                        : 'Select This Route'
+                  }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEVIATION + RECALCULATION -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <p class="font-bold text-sm text-gray-900 mb-2">
+                Deviation Monitor
+              </p>
+
+              <div v-if="routeDeviation" class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
+                    :class="routeDeviationStatusClass"
+                  >
+                    {{ routeDeviation.confirmed_deviation ? 'Deviation Confirmed' : routeDeviation.deviated ? 'Watching' : 'On Route' }}
+                  </span>
+
+                  <span
+                    class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
+                    :class="routeRiskClass"
+                  >
+                    {{ routeDeviation.risk_level }} Risk
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">From Route</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeDeviation.distance_from_route_meters }} m
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Threshold</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeDeviation.threshold_meters }} m
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Off Route</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeDeviation.off_route_count }}/{{ routeDeviation.required_off_route_count }}
+                    </p>
+                  </div>
+                </div>
+
+                <p class="text-xs text-gray-600">
+                  {{ routeDeviation.recommendation }}
                 </p>
 
-                <span
-                  v-if="routeItem.is_recommended"
-                  class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold"
+                <p
+                  v-if="routeDeviation.driver_notification"
+                  class="bg-yellow-50 border border-yellow-100 text-yellow-800 rounded-xl p-2 text-xs"
                 >
-                  Recommended
-                </span>
+                  Driver notice: {{ routeDeviation.driver_notification }}
+                </p>
 
-                <span
-                  v-if="selectedRouteId === routeItem.route_id"
-                  class="bg-[#0693E3] text-white text-[10px] px-2 py-0.5 rounded-full font-bold"
-                >
-                  Selected
-                </span>
+                <p v-if="deviationLastUpdated" class="text-[11px] text-gray-400">
+                  Last deviation check: {{ deviationLastUpdated }}
+                </p>
               </div>
 
-              <p class="text-xs text-gray-500 mt-1 line-clamp-2">
-                {{ routeItem.summary || 'Google Maps Route' }}
-              </p>
+              <div v-else class="text-xs text-gray-500">
+                Deviation status will appear after driver location and selected route are available.
+              </div>
             </div>
 
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black"
-              :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-100 text-gray-500'"
-            >
-              {{ routeItem.rank }}
+            <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+              <p class="font-bold text-sm text-gray-900 mb-2">
+                ETA / Fare Recalculation
+              </p>
+
+              <div v-if="routeCostRecalculation" class="space-y-2 text-xs">
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Old ETA</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeCostRecalculation.old_eta_minutes }} min
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">New ETA</p>
+                    <p class="font-bold text-gray-900">
+                      {{ routeCostRecalculation.new_eta_minutes }} min
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">Old Fare</p>
+                    <p class="font-bold text-gray-900">
+                      Rs {{ routeCostRecalculation.old_fare || 'N/A' }}
+                    </p>
+                  </div>
+
+                  <div class="bg-white rounded-xl p-2 border border-gray-100">
+                    <p class="text-gray-400">New Fare</p>
+                    <p class="font-bold text-gray-900">
+                      Rs {{ routeCostRecalculation.new_fare || 'N/A' }}
+                    </p>
+                  </div>
+                </div>
+
+                <p
+                  class="rounded-xl p-2 text-xs font-semibold"
+                  :class="routeCostRecalculation.fare_changed ? 'bg-yellow-50 text-yellow-800 border border-yellow-100' : 'bg-green-50 text-green-700 border border-green-100'"
+                >
+                  {{
+                    routeCostRecalculation.fare_changed
+                      ? 'Fare changed because selected route distance is different.'
+                      : 'Fare unchanged for the selected route.'
+                  }}
+                </p>
+              </div>
+
+              <div v-else class="text-xs text-gray-500">
+                ETA and fare recalculation will appear after driver selects a route.
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Distance</p>
-              <p class="font-bold text-gray-900">
-                {{ routeItem.distance_km }} km
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">ETA</p>
-              <p class="font-bold text-gray-900">
-                {{ routeItem.duration_in_traffic_minutes }} min
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Delay</p>
-              <p class="font-bold text-gray-900">
-                {{ routeItem.traffic_delay_minutes || 0 }} min
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Fare</p>
-              <p class="font-bold text-gray-900">
-                {{ routeItem.estimated_fare ? `Rs ${routeItem.estimated_fare}` : 'N/A' }}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            @click.stop="selectDriverRoute(routeItem)"
-            :disabled="selectingRouteId === routeItem.route_id"
-            class="w-full mt-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-60"
-            :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-900 text-white'"
+          <!-- AI REASONS -->
+          <div
+            v-if="selectedRoute?.reasons && selectedRoute.reasons.length"
+            class="bg-blue-50 rounded-2xl p-3 border border-blue-100"
           >
-            {{
-              selectingRouteId === routeItem.route_id
-                ? 'Saving...'
-                : selectedRouteId === routeItem.route_id
-                  ? 'Active Route'
-                  : 'Select This Route'
-            }}
-          </button>
+            <p class="font-bold text-sm text-gray-900 mb-2">
+              AI Route Reasoning
+            </p>
+
+            <ul class="space-y-1 text-xs text-gray-600">
+              <li
+                v-for="(reason, index) in selectedRoute.reasons"
+                :key="index"
+                class="flex gap-2"
+              >
+                <span class="text-[#0693E3] font-bold">•</span>
+                <span>{{ reason }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            v-if="routeDeviation?.reasons && routeDeviation.reasons.length"
+            class="bg-gray-50 rounded-2xl p-3 border border-gray-100"
+          >
+            <p class="font-bold text-sm text-gray-900 mb-2">
+              AI Deviation Reasoning
+            </p>
+
+            <ul class="space-y-1 text-xs text-gray-600">
+              <li
+                v-for="(reason, index) in routeDeviation.reasons"
+                :key="index"
+                class="flex gap-2"
+              >
+                <span class="text-[#0693E3] font-bold">•</span>
+                <span>{{ reason }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- DEVIATION + RECALCULATION -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-        <p class="font-bold text-sm text-gray-900 mb-2">
-          Deviation Monitor
-        </p>
-
-        <div v-if="routeDeviation" class="space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <span
-              class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
-              :class="routeDeviationStatusClass"
-            >
-              {{ routeDeviation.confirmed_deviation ? 'Deviation Confirmed' : routeDeviation.deviated ? 'Watching' : 'On Route' }}
-            </span>
-
-            <span
-              class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
-              :class="routeRiskClass"
-            >
-              {{ routeDeviation.risk_level }} Risk
-            </span>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 text-xs">
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">From Route</p>
-              <p class="font-bold text-gray-900">
-                {{ routeDeviation.distance_from_route_meters }} m
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Threshold</p>
-              <p class="font-bold text-gray-900">
-                {{ routeDeviation.threshold_meters }} m
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Off Route</p>
-              <p class="font-bold text-gray-900">
-                {{ routeDeviation.off_route_count }}/{{ routeDeviation.required_off_route_count }}
-              </p>
-            </div>
-          </div>
-
-          <p class="text-xs text-gray-600">
-            {{ routeDeviation.recommendation }}
-          </p>
-
-          <p
-            v-if="routeDeviation.driver_notification"
-            class="bg-yellow-50 border border-yellow-100 text-yellow-800 rounded-xl p-2 text-xs"
-          >
-            Driver notice: {{ routeDeviation.driver_notification }}
-          </p>
-
-          <p v-if="deviationLastUpdated" class="text-[11px] text-gray-400">
-            Last deviation check: {{ deviationLastUpdated }}
-          </p>
-        </div>
-
-        <div v-else class="text-xs text-gray-500">
-          Deviation status will appear after driver location and selected route are available.
-        </div>
-      </div>
-
-      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-        <p class="font-bold text-sm text-gray-900 mb-2">
-          ETA / Fare Recalculation
-        </p>
-
-        <div v-if="routeCostRecalculation" class="space-y-2 text-xs">
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Old ETA</p>
-              <p class="font-bold text-gray-900">
-                {{ routeCostRecalculation.old_eta_minutes }} min
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">New ETA</p>
-              <p class="font-bold text-gray-900">
-                {{ routeCostRecalculation.new_eta_minutes }} min
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">Old Fare</p>
-              <p class="font-bold text-gray-900">
-                Rs {{ routeCostRecalculation.old_fare || 'N/A' }}
-              </p>
-            </div>
-
-            <div class="bg-white rounded-xl p-2 border border-gray-100">
-              <p class="text-gray-400">New Fare</p>
-              <p class="font-bold text-gray-900">
-                Rs {{ routeCostRecalculation.new_fare || 'N/A' }}
-              </p>
-            </div>
-          </div>
-
-          <p
-            class="rounded-xl p-2 text-xs font-semibold"
-            :class="routeCostRecalculation.fare_changed ? 'bg-yellow-50 text-yellow-800 border border-yellow-100' : 'bg-green-50 text-green-700 border border-green-100'"
-          >
-            {{
-              routeCostRecalculation.fare_changed
-                ? 'Fare changed because selected route distance is different.'
-                : 'Fare unchanged for the selected route.'
-            }}
-          </p>
-        </div>
-
-        <div v-else class="text-xs text-gray-500">
-          ETA and fare recalculation will appear after driver selects a route.
-        </div>
-      </div>
-    </div>
-
-    <!-- AI REASONS -->
-    <div
-      v-if="selectedRoute?.reasons && selectedRoute.reasons.length"
-      class="bg-blue-50 rounded-2xl p-3 border border-blue-100"
-    >
-      <p class="font-bold text-sm text-gray-900 mb-2">
-        AI Route Reasoning
-      </p>
-
-      <ul class="space-y-1 text-xs text-gray-600">
-        <li
-          v-for="(reason, index) in selectedRoute.reasons"
-          :key="index"
-          class="flex gap-2"
-        >
-          <span class="text-[#0693E3] font-bold">•</span>
-          <span>{{ reason }}</span>
-        </li>
-      </ul>
-    </div>
-
-    <div
-      v-if="routeDeviation?.reasons && routeDeviation.reasons.length"
-      class="bg-gray-50 rounded-2xl p-3 border border-gray-100"
-    >
-      <p class="font-bold text-sm text-gray-900 mb-2">
-        AI Deviation Reasoning
-      </p>
-
-      <ul class="space-y-1 text-xs text-gray-600">
-        <li
-          v-for="(reason, index) in routeDeviation.reasons"
-          :key="index"
-          class="flex gap-2"
-        >
-          <span class="text-[#0693E3] font-bold">•</span>
-          <span>{{ reason }}</span>
-        </li>
-      </ul>
-    </div>
-  </div>
-</div>
 
       <!-- RIDE DETAILS -->
       <div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
@@ -906,7 +916,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { GoogleMap, Marker } from 'vue3-google-map';
 
 const route = useRoute();
@@ -965,6 +975,8 @@ const selectedRouteId = ref('');
 const selectingRouteId = ref('');
 const routeCostRecalculation = ref(null);
 
+const hoveredRouteId = ref('');
+
 const demoMode = ref(false);
 const demoMoving = ref(false);
 const showDriverArrivedPopup = ref(false);
@@ -974,7 +986,6 @@ const demoCurrentPointIndex = ref(0);
 let demoInterval = null;
 
 const DEMO_STEP_INTERVAL_MS = 10000;
-const ROUTE_DEVIATION_THRESHOLD_METERS = 500;
 
 const googleMapKey = config.public.gmapKey;
 
@@ -987,6 +998,11 @@ const mapCenter = ref({
   lat: officeLocation.value.lat,
   lng: officeLocation.value.lng
 });
+
+const mapZoom = ref(15);
+const trackingMapRef = ref(null);
+const renderedRoutePolylines = ref([]);
+const mapSectionRef = ref(null);
 
 const driverLocation = ref(null);
 const driverLocationSource = ref('');
@@ -1011,7 +1027,6 @@ const hasValidDriverLocation = computed(() => {
   return isValidLatLngPair(driverLocation.value?.lat, driverLocation.value?.lng);
 });
 
-
 const hasValidPickupLocation = computed(() => {
   return isValidLatLngPair(pickupLat.value, pickupLng.value);
 });
@@ -1029,8 +1044,82 @@ const selectedRoute = computed(() => {
 });
 
 const activeRoutePolyline = computed(() => {
-  return selectedRoute.value?.encoded_polyline || routeOptimization.value?.route_polyline || '';
+  return (
+    getRoutePolyline(selectedRoute.value) ||
+    routeOptimization.value?.route_polyline ||
+    routeOptimization.value?.encoded_polyline ||
+    ''
+  );
 });
+
+const routePolylineOptions = computed(() => {
+  return routeOptions.value
+    .map((routeItem) => {
+      const encodedPolyline = getRoutePolyline(routeItem);
+      const path = decodeGooglePolyline(encodedPolyline);
+
+      return {
+        routeItem,
+        encodedPolyline,
+        path
+      };
+    })
+    .filter((item) => item.encodedPolyline && item.path.length)
+    .map((item) => {
+      const routeItem = item.routeItem;
+      const isSelected = selectedRouteId.value === routeItem.route_id;
+      const isRecommended = routeItem.is_recommended;
+      const isHovered = hoveredRouteId.value === routeItem.route_id;
+
+      let strokeColor = '#94A3B8';
+      let strokeWeight = 4;
+      let strokeOpacity = 0.55;
+      let zIndex = 1;
+
+      if (isRecommended) {
+        strokeColor = '#0693E3';
+        strokeWeight = 6;
+        strokeOpacity = 0.9;
+        zIndex = 2;
+      }
+
+      if (isSelected) {
+        strokeColor = '#16A34A';
+        strokeWeight = 8;
+        strokeOpacity = 1;
+        zIndex = 3;
+      }
+
+      if (isHovered) {
+        strokeWeight = 9;
+        strokeOpacity = 1;
+        zIndex = 4;
+      }
+
+      return {
+        key: `route-line-${routeItem.route_id}-${isSelected}-${isHovered}`,
+        route_id: routeItem.route_id,
+        options: {
+          path: item.path,
+          geodesic: true,
+          strokeColor,
+          strokeOpacity,
+          strokeWeight,
+          zIndex,
+          clickable: true,
+          visible: true
+        }
+      };
+    });
+});
+
+watch(
+  routePolylineOptions,
+  () => {
+    renderRoutePolylines();
+  },
+  { deep: true }
+);
 
 const markerKey = computed(() => {
   if (!hasValidDriverLocation.value) return 'no-marker';
@@ -1162,7 +1251,6 @@ function formatSource(source) {
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
-
 
 function buildSmartGeocodeQuery(locationText) {
   const text = String(locationText || '').trim();
@@ -1622,7 +1710,8 @@ async function geocodePickupFromText() {
     const result = await new Promise((resolve, reject) => {
       geocoder.geocode(
         {
-          address: pickupQuery
+          address: pickupQuery,
+          region: 'pk'
         },
         (results, status) => {
           if (status === 'OK' && results && results.length) {
@@ -1646,6 +1735,8 @@ async function geocodePickupFromText() {
     };
 
     console.log('Pickup geocoded successfully:', {
+      input: fromLocation.value,
+      query: pickupQuery,
       address: result.formatted_address,
       pickup_lat: pickupLat.value,
       pickup_lng: pickupLng.value
@@ -1684,7 +1775,8 @@ async function geocodeDropFromText() {
     const result = await new Promise((resolve, reject) => {
       geocoder.geocode(
         {
-          address: dropQuery
+          address: dropQuery,
+          region: 'pk'
         },
         (results, status) => {
           if (status === 'OK' && results && results.length) {
@@ -1703,6 +1795,8 @@ async function geocodeDropFromText() {
     dropCoordinateSource.value = 'google_maps_geocoder';
 
     console.log('Drop geocoded successfully:', {
+      input: toLocation.value,
+      query: dropQuery,
       address: result.formatted_address,
       drop_lat: dropLat.value,
       drop_lng: dropLng.value
@@ -1929,9 +2023,26 @@ async function fetchRouteOptimization() {
 
     if (res.success) {
       routeOptimization.value = res;
-      routeOptions.value = Array.isArray(res.routes) ? res.routes : [];
+      routeOptions.value = normalizeRouteOptions(res);
+
+      console.log('RSL Route Polyline Debug:', {
+        routes_count: routeOptions.value.length,
+        polyline_count: routeOptions.value.filter((routeItem) => getRoutePolyline(routeItem)).length,
+        routes: routeOptions.value.map((routeItem) => ({
+          route_id: routeItem.route_id,
+          rank: routeItem.rank,
+          has_encoded_polyline: Boolean(routeItem.encoded_polyline),
+          has_route_polyline: Boolean(routeItem.route_polyline),
+          polyline_length: getRoutePolyline(routeItem).length
+        }))
+      });
+
       selectedRouteId.value = res.recommended_route_id || routeOptions.value[0]?.route_id || '';
       routeLastUpdated.value = formatTime(new Date());
+
+      await nextTick();
+      renderRoutePolylines();
+      focusMapOnRoute(selectedRoute.value || recommendedRoute.value);
 
       if (selectedRouteId.value) {
         await selectDriverRoute(
@@ -2055,6 +2166,9 @@ async function selectDriverRoute(routeItem, silent = false) {
 
     if (res.success) {
       selectedRouteId.value = routeItem.route_id;
+      await nextTick();
+      renderRoutePolylines();
+      focusMapOnRoute(routeItem);
 
       await recalculateRouteCost(routeItem.route_id);
       await fetchRouteDeviation();
@@ -2106,6 +2220,121 @@ async function recalculateRouteCost(routeId) {
   }
 }
 
+function getRoutePolyline(routeItem) {
+  if (!routeItem) {
+    return '';
+  }
+
+  return (
+    routeItem.encoded_polyline ||
+    routeItem.route_polyline ||
+    routeItem.polyline ||
+    routeItem.overview_polyline?.points ||
+    routeItem.overview_polyline ||
+    ''
+  );
+}
+
+function normalizeRouteOptions(response) {
+  const routes = Array.isArray(response?.routes) ? response.routes : [];
+
+  if (routes.length) {
+    return routes.map((routeItem, index) => {
+      const encodedPolyline =
+        getRoutePolyline(routeItem) ||
+        (index === 0 ? response?.route_polyline : '') ||
+        (index === 0 ? response?.encoded_polyline : '');
+
+      return {
+        ...routeItem,
+        route_id: routeItem.route_id || `route_${index + 1}`,
+        rank: routeItem.rank || index + 1,
+        encoded_polyline: encodedPolyline
+      };
+    });
+  }
+
+  if (response?.route_polyline || response?.encoded_polyline) {
+    return [
+      {
+        route_id: response.recommended_route_id || 'route_1',
+        rank: 1,
+        summary: response.best_route?.summary || response.summary || 'Recommended Route',
+        distance_km: response.distance_km || response.best_route?.distance_km || 0,
+        duration_in_traffic_minutes:
+          response.duration_minutes ||
+          response.best_route?.duration_minutes ||
+          0,
+        confidence: response.confidence || 80,
+        estimated_fare: response.estimated_fare || null,
+        is_recommended: true,
+        encoded_polyline: response.route_polyline || response.encoded_polyline
+      }
+    ];
+  }
+
+  return [];
+}
+
+function getGoogleMapInstance() {
+  return (
+    trackingMapRef.value?.map ||
+    trackingMapRef.value?.$mapObject ||
+    trackingMapRef.value?.googleMap ||
+    null
+  );
+}
+
+function clearRenderedRoutePolylines() {
+  renderedRoutePolylines.value.forEach((polyline) => {
+    if (polyline && typeof polyline.setMap === 'function') {
+      polyline.setMap(null);
+    }
+  });
+
+  renderedRoutePolylines.value = [];
+}
+
+function renderRoutePolylines() {
+  if (typeof window === 'undefined' || !window.google?.maps) {
+    return;
+  }
+
+  const map = getGoogleMapInstance();
+
+  if (!map) {
+    setTimeout(() => {
+      renderRoutePolylines();
+    }, 300);
+    return;
+  }
+
+  clearRenderedRoutePolylines();
+
+  routePolylineOptions.value.forEach((routeLine) => {
+    const polyline = new window.google.maps.Polyline({
+      ...routeLine.options,
+      map
+    });
+
+    polyline.addListener('click', () => {
+      selectRouteById(routeLine.route_id);
+    });
+
+    polyline.addListener('mouseover', () => {
+      hoveredRouteId.value = routeLine.route_id;
+    });
+
+    polyline.addListener('mouseout', () => {
+      hoveredRouteId.value = '';
+    });
+
+    renderedRoutePolylines.value.push(polyline);
+  });
+
+  console.log('Rendered route polylines on map:', renderedRoutePolylines.value.length);
+}
+
 function getRouteCardClass(routeItem) {
   if (!routeItem) {
     return 'bg-white border-gray-100';
@@ -2120,6 +2349,154 @@ function getRouteCardClass(routeItem) {
   }
 
   return 'bg-white border-gray-100 hover:border-[#0693E3]/40 hover:shadow-md';
+}
+
+function selectRouteById(routeId) {
+  const routeItem = routeOptions.value.find((item) => item.route_id === routeId);
+
+  if (!routeItem) {
+    return;
+  }
+
+  selectDriverRoute(routeItem);
+}
+
+async function handleRouteChoiceClick(routeItem) {
+  if (!routeItem) {
+    return;
+  }
+
+  await selectDriverRoute(routeItem);
+
+  setTimeout(() => {
+    scrollToTrackingMap();
+  }, 200);
+}
+
+function scrollToTrackingMap() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (mapSectionRef.value) {
+    mapSectionRef.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    return;
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+function decodeGooglePolyline(encoded) {
+  if (!encoded || typeof encoded !== 'string') {
+    return [];
+  }
+
+  let index = 0;
+  const path = [];
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let b;
+    let shift = 0;
+    let result = 0;
+
+    do {
+      b = encoded.charCodeAt(index) - 63;
+      index += 1;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      b = encoded.charCodeAt(index) - 63;
+      index += 1;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    path.push({
+      lat: lat / 1e5,
+      lng: lng / 1e5
+    });
+  }
+
+  return path;
+}
+
+function focusMapOnRoute(routeItem) {
+  const encodedPolyline = getRoutePolyline(routeItem);
+
+  if (!encodedPolyline) {
+    console.log('Focus route skipped: polyline missing', routeItem);
+    return;
+  }
+
+  const path = decodeGooglePolyline(encodedPolyline);
+
+  if (!path.length) {
+    console.log('Focus route skipped: decoded path empty', {
+      route_id: routeItem?.route_id,
+      polyline_length: encodedPolyline.length
+    });
+    return;
+  }
+
+  const map = getGoogleMapInstance();
+
+  if (map && window.google?.maps) {
+    const bounds = new window.google.maps.LatLngBounds();
+
+    path.forEach((point) => {
+      bounds.extend(point);
+    });
+
+    map.fitBounds(bounds);
+  } else {
+    const centerPoint = path[Math.floor(path.length / 2)];
+
+    if (isValidLatLngPair(centerPoint.lat, centerPoint.lng)) {
+      mapCenter.value = {
+        lat: centerPoint.lat,
+        lng: centerPoint.lng
+      };
+    }
+  }
+
+  const distanceKm = Number(routeItem.distance_km || 0);
+
+  if (distanceKm >= 80) {
+    mapZoom.value = 8;
+  } else if (distanceKm >= 30) {
+    mapZoom.value = 10;
+  } else if (distanceKm >= 10) {
+    mapZoom.value = 12;
+  } else {
+    mapZoom.value = 14;
+  }
+
+  console.log('Map focused on selected route:', {
+    route_id: routeItem.route_id,
+    points: path.length,
+    zoom: mapZoom.value,
+    center: mapCenter.value
+  });
 }
 
 async function startDemoMovement() {
@@ -2313,11 +2690,11 @@ onMounted(async () => {
         await fetchLatestLocation();
         await fetchAiEta();
 
-if (!routeOptions.value.length) {
-  await fetchRouteOptimization();
-} else {
-  await fetchRouteDeviation();
-}
+        if (!routeOptions.value.length) {
+          await fetchRouteOptimization();
+        } else {
+          await fetchRouteDeviation();
+        }
       }
     } else {
       handleOffline();
@@ -2331,9 +2708,9 @@ if (!routeOptions.value.length) {
   }, 30000);
 
   routeDeviationInterval = setInterval(async () => {
-  if (navigator.onLine && !demoMoving.value && activeRoutePolyline.value) {
-  await fetchRouteDeviation();
-}
+    if (navigator.onLine && !demoMoving.value && activeRoutePolyline.value) {
+      await fetchRouteDeviation();
+    }
   }, 15000);
 });
 
@@ -2343,6 +2720,7 @@ onBeforeUnmount(() => {
   if (routeDeviationInterval) clearInterval(routeDeviationInterval);
   if (demoInterval) clearInterval(demoInterval);
 
+  clearRenderedRoutePolylines();
   stopOfflineGpsTracking();
 
   window.removeEventListener('online', handleOnline);
