@@ -145,8 +145,8 @@
         </div>
 
         <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3">
-          <p class="text-xs text-gray-500">Status</p>
-          <p class="font-bold text-gray-900 capitalize">{{ etaPrediction?.status || 'Waiting' }}</p>
+          <p class="text-xs text-gray-500">Route Risk</p>
+          <p class="font-bold text-gray-900 capitalize">{{ routeDeviation?.risk_level || 'Waiting' }}</p>
         </div>
       </div>
 
@@ -397,7 +397,7 @@
             v-if="etaPrediction.reasons && etaPrediction.reasons.length"
             class="bg-white rounded-2xl p-3 shadow-sm border border-gray-100"
           >
-            <p class="font-semibold text-sm text-gray-800 mb-2">AI Reasoning</p>
+            <p class="font-semibold text-sm text-gray-800 mb-2">AI ETA Reasoning</p>
 
             <ul class="space-y-1 text-xs text-gray-600">
               <li
@@ -412,6 +412,387 @@
           </div>
         </div>
       </div>
+<!-- AI ROUTE OPTIMIZATION + DEVIATION CARD -->
+<div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="bg-[#0693E3] text-white text-xs font-bold px-2 py-1 rounded-full">
+          AI
+        </span>
+
+        <h3 class="font-bold text-gray-900">
+          Smart Route Intelligence
+        </h3>
+
+        <span
+          v-if="recommendedRoute"
+          class="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full font-bold"
+        >
+          Recommended: {{ recommendedRoute.route_id }}
+        </span>
+      </div>
+
+      <p class="text-xs text-gray-500 mt-1">
+        AI compares available pickup-to-drop routes, recommends the best one, and lets the driver select the final route.
+      </p>
+
+      <p v-if="dropGeoLoading" class="text-[11px] text-blue-700 mt-1 font-semibold">
+        Finding drop coordinates from location name...
+      </p>
+
+      <p v-if="dropCoordinateSource" class="text-[11px] text-green-700 mt-1 font-semibold">
+        Drop coordinates source: {{ formatSource(dropCoordinateSource) }}
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-2">
+      <button
+        @click="fetchRouteOptimization"
+        :disabled="routeLoading || !bookingId || !hasValidPickupLocation || !toLocation"
+        class="bg-[#0693E3] text-white px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+      >
+        {{ routeLoading ? 'Optimizing...' : 'Optimize Routes' }}
+      </button>
+
+      <button
+        @click="fetchRouteDeviation"
+        :disabled="deviationLoading || !activeRoutePolyline || !hasValidDriverLocation"
+        class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+      >
+        {{ deviationLoading ? 'Checking...' : 'Check Deviation' }}
+      </button>
+    </div>
+  </div>
+
+  <div
+    v-if="routeError"
+    class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-3"
+  >
+    {{ routeError }}
+  </div>
+
+  <div
+    v-if="deviationError"
+    class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-3 text-sm mb-3"
+  >
+    {{ deviationError }}
+  </div>
+
+  <div
+    v-if="!routeOptions.length && !routeLoading && !routeError"
+    class="bg-gray-50 border border-gray-100 rounded-2xl p-3 text-sm text-gray-600"
+  >
+    AI route options will appear after pickup and drop coordinates are available.
+  </div>
+
+  <div
+    v-if="routeLoading && !routeOptions.length"
+    class="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-sm text-blue-700"
+  >
+    Comparing available routes using traffic-aware AI route scoring...
+  </div>
+
+  <div v-if="routeOptions.length" class="space-y-4">
+    <!-- TOP SUMMARY -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-blue-50 rounded-2xl p-3 border border-blue-100">
+        <p class="text-xs text-gray-500">Best Route</p>
+        <p class="font-bold text-gray-900 leading-snug">
+          {{ recommendedRoute?.summary || 'Recommended Route' }}
+        </p>
+      </div>
+
+      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+        <p class="text-xs text-gray-500">Trip Distance</p>
+        <p class="text-2xl font-bold text-gray-900">
+          {{ selectedRoute?.distance_km || recommendedRoute?.distance_km }} km
+        </p>
+      </div>
+
+      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+        <p class="text-xs text-gray-500">Traffic ETA</p>
+        <p class="text-2xl font-bold text-gray-900">
+          {{ selectedRoute?.duration_in_traffic_minutes || recommendedRoute?.duration_in_traffic_minutes }} min
+        </p>
+      </div>
+
+      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+        <p class="text-xs text-gray-500">Confidence</p>
+        <p class="text-2xl font-bold text-gray-900">
+          {{ selectedRoute?.confidence || recommendedRoute?.confidence }}%
+        </p>
+      </div>
+    </div>
+
+    <!-- ROUTE CHOICE CARDS -->
+    <div>
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <p class="font-bold text-sm text-gray-900">
+          Driver Route Choices
+        </p>
+
+        <p class="text-[11px] text-gray-500">
+          System recommends. Driver makes final selection.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div
+          v-for="routeItem in routeOptions"
+          :key="routeItem.route_id"
+          class="rounded-2xl border p-3 transition cursor-pointer"
+          :class="getRouteCardClass(routeItem)"
+          @click="selectDriverRoute(routeItem)"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-bold text-gray-900">
+                  Route {{ routeItem.rank }}
+                </p>
+
+                <span
+                  v-if="routeItem.is_recommended"
+                  class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold"
+                >
+                  Recommended
+                </span>
+
+                <span
+                  v-if="selectedRouteId === routeItem.route_id"
+                  class="bg-[#0693E3] text-white text-[10px] px-2 py-0.5 rounded-full font-bold"
+                >
+                  Selected
+                </span>
+              </div>
+
+              <p class="text-xs text-gray-500 mt-1 line-clamp-2">
+                {{ routeItem.summary || 'Google Maps Route' }}
+              </p>
+            </div>
+
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black"
+              :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-100 text-gray-500'"
+            >
+              {{ routeItem.rank }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Distance</p>
+              <p class="font-bold text-gray-900">
+                {{ routeItem.distance_km }} km
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">ETA</p>
+              <p class="font-bold text-gray-900">
+                {{ routeItem.duration_in_traffic_minutes }} min
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Delay</p>
+              <p class="font-bold text-gray-900">
+                {{ routeItem.traffic_delay_minutes || 0 }} min
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Fare</p>
+              <p class="font-bold text-gray-900">
+                {{ routeItem.estimated_fare ? `Rs ${routeItem.estimated_fare}` : 'N/A' }}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            @click.stop="selectDriverRoute(routeItem)"
+            :disabled="selectingRouteId === routeItem.route_id"
+            class="w-full mt-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-60"
+            :class="selectedRouteId === routeItem.route_id ? 'bg-[#0693E3] text-white' : 'bg-gray-900 text-white'"
+          >
+            {{
+              selectingRouteId === routeItem.route_id
+                ? 'Saving...'
+                : selectedRouteId === routeItem.route_id
+                  ? 'Active Route'
+                  : 'Select This Route'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVIATION + RECALCULATION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+        <p class="font-bold text-sm text-gray-900 mb-2">
+          Deviation Monitor
+        </p>
+
+        <div v-if="routeDeviation" class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
+              :class="routeDeviationStatusClass"
+            >
+              {{ routeDeviation.confirmed_deviation ? 'Deviation Confirmed' : routeDeviation.deviated ? 'Watching' : 'On Route' }}
+            </span>
+
+            <span
+              class="inline-flex px-3 py-1 rounded-full text-xs font-bold capitalize"
+              :class="routeRiskClass"
+            >
+              {{ routeDeviation.risk_level }} Risk
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">From Route</p>
+              <p class="font-bold text-gray-900">
+                {{ routeDeviation.distance_from_route_meters }} m
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Threshold</p>
+              <p class="font-bold text-gray-900">
+                {{ routeDeviation.threshold_meters }} m
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Off Route</p>
+              <p class="font-bold text-gray-900">
+                {{ routeDeviation.off_route_count }}/{{ routeDeviation.required_off_route_count }}
+              </p>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-600">
+            {{ routeDeviation.recommendation }}
+          </p>
+
+          <p
+            v-if="routeDeviation.driver_notification"
+            class="bg-yellow-50 border border-yellow-100 text-yellow-800 rounded-xl p-2 text-xs"
+          >
+            Driver notice: {{ routeDeviation.driver_notification }}
+          </p>
+
+          <p v-if="deviationLastUpdated" class="text-[11px] text-gray-400">
+            Last deviation check: {{ deviationLastUpdated }}
+          </p>
+        </div>
+
+        <div v-else class="text-xs text-gray-500">
+          Deviation status will appear after driver location and selected route are available.
+        </div>
+      </div>
+
+      <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+        <p class="font-bold text-sm text-gray-900 mb-2">
+          ETA / Fare Recalculation
+        </p>
+
+        <div v-if="routeCostRecalculation" class="space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Old ETA</p>
+              <p class="font-bold text-gray-900">
+                {{ routeCostRecalculation.old_eta_minutes }} min
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">New ETA</p>
+              <p class="font-bold text-gray-900">
+                {{ routeCostRecalculation.new_eta_minutes }} min
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">Old Fare</p>
+              <p class="font-bold text-gray-900">
+                Rs {{ routeCostRecalculation.old_fare || 'N/A' }}
+              </p>
+            </div>
+
+            <div class="bg-white rounded-xl p-2 border border-gray-100">
+              <p class="text-gray-400">New Fare</p>
+              <p class="font-bold text-gray-900">
+                Rs {{ routeCostRecalculation.new_fare || 'N/A' }}
+              </p>
+            </div>
+          </div>
+
+          <p
+            class="rounded-xl p-2 text-xs font-semibold"
+            :class="routeCostRecalculation.fare_changed ? 'bg-yellow-50 text-yellow-800 border border-yellow-100' : 'bg-green-50 text-green-700 border border-green-100'"
+          >
+            {{
+              routeCostRecalculation.fare_changed
+                ? 'Fare changed because selected route distance is different.'
+                : 'Fare unchanged for the selected route.'
+            }}
+          </p>
+        </div>
+
+        <div v-else class="text-xs text-gray-500">
+          ETA and fare recalculation will appear after driver selects a route.
+        </div>
+      </div>
+    </div>
+
+    <!-- AI REASONS -->
+    <div
+      v-if="selectedRoute?.reasons && selectedRoute.reasons.length"
+      class="bg-blue-50 rounded-2xl p-3 border border-blue-100"
+    >
+      <p class="font-bold text-sm text-gray-900 mb-2">
+        AI Route Reasoning
+      </p>
+
+      <ul class="space-y-1 text-xs text-gray-600">
+        <li
+          v-for="(reason, index) in selectedRoute.reasons"
+          :key="index"
+          class="flex gap-2"
+        >
+          <span class="text-[#0693E3] font-bold">•</span>
+          <span>{{ reason }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div
+      v-if="routeDeviation?.reasons && routeDeviation.reasons.length"
+      class="bg-gray-50 rounded-2xl p-3 border border-gray-100"
+    >
+      <p class="font-bold text-sm text-gray-900 mb-2">
+        AI Deviation Reasoning
+      </p>
+
+      <ul class="space-y-1 text-xs text-gray-600">
+        <li
+          v-for="(reason, index) in routeDeviation.reasons"
+          :key="index"
+          class="flex gap-2"
+        >
+          <span class="text-[#0693E3] font-bold">•</span>
+          <span>{{ reason }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
 
       <!-- RIDE DETAILS -->
       <div class="bg-white border border-gray-100 rounded-3xl p-4 mb-4 shadow-sm">
@@ -451,6 +832,21 @@
             <p class="text-gray-400 text-xs">Pickup Coordinates</p>
             <p class="font-semibold text-yellow-700">
               Missing. System will try to generate coordinates from pickup text.
+            </p>
+          </div>
+
+          <div v-if="hasValidDropLocation" class="bg-gray-50 rounded-2xl p-3">
+            <p class="text-gray-400 text-xs">Drop Coordinates</p>
+            <p class="font-semibold">
+              Lat: {{ dropLat.toFixed(6) }},
+              Lng: {{ dropLng.toFixed(6) }}
+            </p>
+          </div>
+
+          <div v-else-if="toLocation" class="bg-yellow-50 rounded-2xl p-3">
+            <p class="text-gray-400 text-xs">Drop Coordinates</p>
+            <p class="font-semibold text-yellow-700">
+              Missing. System will try to generate coordinates from drop text.
             </p>
           </div>
         </div>
@@ -526,8 +922,14 @@ const customerId = ref('');
 const pickupLat = ref(toNumberOrNull(route.query.pickup_lat));
 const pickupLng = ref(toNumberOrNull(route.query.pickup_lng));
 
+const dropLat = ref(toNumberOrNull(route.query.drop_lat));
+const dropLng = ref(toNumberOrNull(route.query.drop_lng));
+
 const pickupCoordinateSource = ref('');
 const pickupGeoLoading = ref(false);
+
+const dropCoordinateSource = ref('');
+const dropGeoLoading = ref(false);
 
 const driverId = ref('');
 const driverName = ref('');
@@ -548,6 +950,21 @@ const etaLoading = ref(false);
 const etaError = ref('');
 const etaLastUpdated = ref('');
 
+const routeOptimization = ref(null);
+const routeLoading = ref(false);
+const routeError = ref('');
+const routeLastUpdated = ref('');
+
+const routeDeviation = ref(null);
+const deviationLoading = ref(false);
+const deviationError = ref('');
+const deviationLastUpdated = ref('');
+
+const routeOptions = ref([]);
+const selectedRouteId = ref('');
+const selectingRouteId = ref('');
+const routeCostRecalculation = ref(null);
+
 const demoMode = ref(false);
 const demoMoving = ref(false);
 const showDriverArrivedPopup = ref(false);
@@ -557,6 +974,7 @@ const demoCurrentPointIndex = ref(0);
 let demoInterval = null;
 
 const DEMO_STEP_INTERVAL_MS = 10000;
+const ROUTE_DEVIATION_THRESHOLD_METERS = 500;
 
 const googleMapKey = config.public.gmapKey;
 
@@ -564,6 +982,7 @@ const officeLocation = ref({
   lat: toNumberOrNull(route.query.office_lat) || 34.0008965,
   lng: toNumberOrNull(route.query.office_lng) || 71.4986689
 });
+
 const mapCenter = ref({
   lat: officeLocation.value.lat,
   lng: officeLocation.value.lng
@@ -580,6 +999,7 @@ const offlineCount = ref(0);
 
 let trackingInterval = null;
 let etaInterval = null;
+let routeDeviationInterval = null;
 let offlineGpsInterval = null;
 
 const OFFLINE_STORAGE_KEY = 'rsl_offline_locations';
@@ -591,8 +1011,25 @@ const hasValidDriverLocation = computed(() => {
   return isValidLatLngPair(driverLocation.value?.lat, driverLocation.value?.lng);
 });
 
+
 const hasValidPickupLocation = computed(() => {
   return isValidLatLngPair(pickupLat.value, pickupLng.value);
+});
+
+const hasValidDropLocation = computed(() => {
+  return isValidLatLngPair(dropLat.value, dropLng.value);
+});
+
+const recommendedRoute = computed(() => {
+  return routeOptions.value.find((routeItem) => routeItem.is_recommended) || routeOptions.value[0] || null;
+});
+
+const selectedRoute = computed(() => {
+  return routeOptions.value.find((routeItem) => routeItem.route_id === selectedRouteId.value) || recommendedRoute.value;
+});
+
+const activeRoutePolyline = computed(() => {
+  return selectedRoute.value?.encoded_polyline || routeOptimization.value?.route_polyline || '';
 });
 
 const markerKey = computed(() => {
@@ -649,6 +1086,36 @@ const etaStatusClass = computed(() => {
   return 'bg-blue-100 text-blue-700';
 });
 
+const routeRiskClass = computed(() => {
+  const risk = routeDeviation.value?.risk_level;
+
+  if (risk === 'high') {
+    return 'bg-red-600 text-white';
+  }
+
+  if (risk === 'medium') {
+    return 'bg-yellow-400 text-slate-950';
+  }
+
+  if (risk === 'low') {
+    return 'bg-green-500 text-white';
+  }
+
+  return 'bg-white/20 text-white';
+});
+
+const routeDeviationStatusClass = computed(() => {
+  if (!routeDeviation.value) {
+    return 'bg-white/20 text-white';
+  }
+
+  if (routeDeviation.value.deviated) {
+    return 'bg-red-600 text-white';
+  }
+
+  return 'bg-green-500 text-white';
+});
+
 const safetyUrl = computed(() => {
   return `/safety?booking_id=${bookingId.value}&customer_id=${customerId.value}&driver_id=${driverId.value}&driver_phone=${driverContact.value}`;
 });
@@ -694,6 +1161,27 @@ function formatSource(source) {
   return String(source)
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+
+function buildSmartGeocodeQuery(locationText) {
+  const text = String(locationText || '').trim();
+
+  if (!text) {
+    return '';
+  }
+
+  const lowerText = text.toLowerCase();
+
+  const hasCountry =
+    lowerText.includes('pakistan') ||
+    lowerText.includes('pk');
+
+  if (hasCountry) {
+    return text;
+  }
+
+  return `${text}, Pakistan`;
 }
 
 function toNumberOrNull(value) {
@@ -929,6 +1417,7 @@ async function syncOfflineLocations() {
       clearOfflineLocations();
       await fetchLatestLocation();
       await fetchAiEta();
+      await fetchRouteDeviation();
     } else {
       console.log('Offline sync failed:', res.message);
     }
@@ -982,8 +1471,7 @@ async function fetchBookingStatus() {
           'from_lat',
           'fromLat',
           'source_lat',
-          'sourceLat',
-          'latitude'
+          'sourceLat'
         ])
       );
 
@@ -994,8 +1482,33 @@ async function fetchBookingStatus() {
           'from_lng',
           'fromLng',
           'source_lng',
-          'sourceLng',
-          'longitude'
+          'sourceLng'
+        ])
+      );
+
+      const bookingDropLat = toNumberOrNull(
+        getFirstValue(res.data, [
+          'drop_lat',
+          'dropLat',
+          'to_lat',
+          'toLat',
+          'destination_lat',
+          'destinationLat',
+          'dropoff_lat',
+          'dropoffLat'
+        ])
+      );
+
+      const bookingDropLng = toNumberOrNull(
+        getFirstValue(res.data, [
+          'drop_lng',
+          'dropLng',
+          'to_lng',
+          'toLng',
+          'destination_lng',
+          'destinationLng',
+          'dropoff_lng',
+          'dropoffLng'
         ])
       );
 
@@ -1005,8 +1518,18 @@ async function fetchBookingStatus() {
         pickupCoordinateSource.value = 'booking_record';
       }
 
+      if (isValidLatLngPair(bookingDropLat, bookingDropLng)) {
+        dropLat.value = bookingDropLat;
+        dropLng.value = bookingDropLng;
+        dropCoordinateSource.value = 'booking_record';
+      }
+
       if (!hasValidPickupLocation.value && fromLocation.value) {
         await geocodePickupFromText();
+      }
+
+      if (!hasValidDropLocation.value && toLocation.value) {
+        await geocodeDropFromText();
       }
 
       if (hasValidPickupLocation.value && !hasValidDriverLocation.value) {
@@ -1088,7 +1611,7 @@ async function geocodePickupFromText() {
     pickupGeoLoading.value = true;
     etaError.value = '';
 
-    const pickupQuery = `${fromLocation.value}, Peshawar, Pakistan`;
+    const pickupQuery = buildSmartGeocodeQuery(fromLocation.value);
 
     console.log('Trying pickup geocode:', pickupQuery);
 
@@ -1134,6 +1657,63 @@ async function geocodePickupFromText() {
       'Pickup location text was found, but coordinates could not be generated. Add pickup_lat and pickup_lng to booking data.';
   } finally {
     pickupGeoLoading.value = false;
+  }
+}
+
+async function geocodeDropFromText() {
+  if (!toLocation.value || hasValidDropLocation.value) {
+    return;
+  }
+
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    dropGeoLoading.value = true;
+    routeError.value = '';
+
+    const dropQuery = buildSmartGeocodeQuery(toLocation.value);
+
+    console.log('Trying drop geocode:', dropQuery);
+
+    await waitForGoogleMaps();
+
+    const geocoder = new window.google.maps.Geocoder();
+
+    const result = await new Promise((resolve, reject) => {
+      geocoder.geocode(
+        {
+          address: dropQuery
+        },
+        (results, status) => {
+          if (status === 'OK' && results && results.length) {
+            resolve(results[0]);
+          } else {
+            reject(new Error(`Drop geocoding failed: ${status}`));
+          }
+        }
+      );
+    });
+
+    const location = result.geometry.location;
+
+    dropLat.value = Number(location.lat());
+    dropLng.value = Number(location.lng());
+    dropCoordinateSource.value = 'google_maps_geocoder';
+
+    console.log('Drop geocoded successfully:', {
+      address: result.formatted_address,
+      drop_lat: dropLat.value,
+      drop_lng: dropLng.value
+    });
+  } catch (error) {
+    console.log('Drop Geocoding Error:', error);
+
+    routeError.value =
+      'Drop location text was found, but coordinates could not be generated. Route optimization needs drop latitude and longitude.';
+  } finally {
+    dropGeoLoading.value = false;
   }
 }
 
@@ -1293,6 +1873,255 @@ async function fetchAiEta() {
   }
 }
 
+async function fetchRouteOptimization() {
+  routeError.value = '';
+
+  if (!bookingId.value) {
+    routeError.value = 'Booking ID is missing.';
+    return;
+  }
+
+  if (!navigator.onLine) {
+    routeError.value = 'Route optimization is not available in offline mode.';
+    return;
+  }
+
+  if (!hasValidPickupLocation.value) {
+    await geocodePickupFromText();
+  }
+
+  if (!hasValidDropLocation.value && toLocation.value) {
+    await geocodeDropFromText();
+  }
+
+  if (!hasValidPickupLocation.value) {
+    routeError.value = 'Pickup coordinates are missing. Route optimization needs pickup latitude and longitude.';
+    return;
+  }
+
+  if (!hasValidDropLocation.value) {
+    routeError.value = 'Drop coordinates are missing. Route optimization needs drop latitude and longitude.';
+    return;
+  }
+
+  try {
+    routeLoading.value = true;
+
+    const body = {
+      booking_id: Number(bookingId.value) || bookingId.value,
+      pickup_lat: pickupLat.value,
+      pickup_lng: pickupLng.value,
+      drop_lat: dropLat.value,
+      drop_lng: dropLng.value,
+      ride_type: 'per_km',
+      price_per_km: 250,
+      gps_accuracy_meters: 25
+    };
+
+    console.log('AI Multiple Route Optimization Request Body:', body);
+
+    const res = await $useCustomFetch('/api/site/v1/ai/optimize-routes', {
+      method: 'POST',
+      body
+    });
+
+    console.log('AI Multiple Route Optimization Response:', res);
+
+    if (res.success) {
+      routeOptimization.value = res;
+      routeOptions.value = Array.isArray(res.routes) ? res.routes : [];
+      selectedRouteId.value = res.recommended_route_id || routeOptions.value[0]?.route_id || '';
+      routeLastUpdated.value = formatTime(new Date());
+
+      if (selectedRouteId.value) {
+        await selectDriverRoute(
+          routeOptions.value.find((routeItem) => routeItem.route_id === selectedRouteId.value),
+          true
+        );
+      }
+
+      await fetchRouteDeviation();
+    } else {
+      routeError.value = res.message || 'Unable to optimize routes.';
+    }
+  } catch (error) {
+    console.log('AI Multiple Route Optimization Error:', error);
+
+    routeError.value =
+      error?.data?.message ||
+      error?.message ||
+      'AI route optimization failed.';
+  } finally {
+    routeLoading.value = false;
+  }
+}
+
+async function fetchRouteDeviation() {
+  deviationError.value = '';
+
+  if (!bookingId.value) {
+    deviationError.value = 'Booking ID is missing.';
+    return;
+  }
+
+  if (!navigator.onLine) {
+    deviationError.value = 'Route deviation check is not available in offline mode.';
+    return;
+  }
+
+  if (!hasValidDriverLocation.value) {
+    deviationError.value = 'Driver location is missing. Deviation check needs driver latitude and longitude.';
+    return;
+  }
+
+  if (!activeRoutePolyline.value) {
+    deviationError.value = 'Selected route polyline is missing. Generate or select route first.';
+    return;
+  }
+
+  try {
+    deviationLoading.value = true;
+
+    const body = {
+      booking_id: Number(bookingId.value) || bookingId.value,
+      driver_id: Number(driverId.value) || driverId.value,
+      driver_lat: driverLocation.value.lat,
+      driver_lng: driverLocation.value.lng,
+      route_polyline: activeRoutePolyline.value,
+      road_type: 'city',
+      gps_accuracy_meters: 25,
+      speed_kmph: 30,
+      driver_email: driverEmail.value || ''
+    };
+
+    console.log('AI Improved Route Deviation Request Body:', body);
+
+    const res = await $useCustomFetch('/api/site/v1/ai/check-route-deviation', {
+      method: 'POST',
+      body
+    });
+
+    console.log('AI Improved Route Deviation Response:', res);
+
+    if (res.success) {
+      routeDeviation.value = res;
+      deviationLastUpdated.value = formatTime(new Date());
+    } else {
+      deviationError.value = res.message || 'Unable to check route deviation.';
+    }
+  } catch (error) {
+    console.log('AI Improved Route Deviation Error:', error);
+
+    deviationError.value =
+      error?.data?.message ||
+      error?.message ||
+      'AI route deviation check failed.';
+  } finally {
+    deviationLoading.value = false;
+  }
+}
+
+async function selectDriverRoute(routeItem, silent = false) {
+  if (!routeItem || !routeItem.route_id) {
+    return;
+  }
+
+  if (!bookingId.value) {
+    routeError.value = 'Booking ID is missing. Route selection cannot be saved.';
+    return;
+  }
+
+  try {
+    selectingRouteId.value = routeItem.route_id;
+
+    const body = {
+      booking_id: Number(bookingId.value) || bookingId.value,
+      driver_id: Number(driverId.value) || driverId.value || null,
+      selected_route_id: routeItem.route_id,
+      selected_by: silent ? 'system_recommendation' : 'driver',
+      reason: silent
+        ? 'System selected recommended route by default.'
+        : 'Driver selected route from Smart Route Intelligence UI.'
+    };
+
+    console.log('AI Select Route Request Body:', body);
+
+    const res = await $useCustomFetch('/api/site/v1/ai/select-route', {
+      method: 'POST',
+      body
+    });
+
+    console.log('AI Select Route Response:', res);
+
+    if (res.success) {
+      selectedRouteId.value = routeItem.route_id;
+
+      await recalculateRouteCost(routeItem.route_id);
+      await fetchRouteDeviation();
+    } else if (!silent) {
+      routeError.value = res.message || 'Unable to save selected route.';
+    }
+  } catch (error) {
+    console.log('AI Select Route Error:', error);
+
+    if (!silent) {
+      routeError.value =
+        error?.data?.message ||
+        error?.message ||
+        'Selected route could not be saved.';
+    }
+  } finally {
+    selectingRouteId.value = '';
+  }
+}
+
+async function recalculateRouteCost(routeId) {
+  if (!bookingId.value || !routeId) {
+    return;
+  }
+
+  try {
+    const body = {
+      booking_id: Number(bookingId.value) || bookingId.value,
+      selected_route_id: routeId,
+      ride_type: 'per_km',
+      price_per_km: 250,
+      original_fare: selectedRoute.value?.estimated_fare || recommendedRoute.value?.estimated_fare || null
+    };
+
+    console.log('AI Route Cost Recalculation Request Body:', body);
+
+    const res = await $useCustomFetch('/api/site/v1/ai/recalculate-route-cost', {
+      method: 'POST',
+      body
+    });
+
+    console.log('AI Route Cost Recalculation Response:', res);
+
+    if (res.success) {
+      routeCostRecalculation.value = res;
+    }
+  } catch (error) {
+    console.log('AI Route Cost Recalculation Error:', error);
+  }
+}
+
+function getRouteCardClass(routeItem) {
+  if (!routeItem) {
+    return 'bg-white border-gray-100';
+  }
+
+  if (selectedRouteId.value === routeItem.route_id) {
+    return 'bg-blue-50 border-[#0693E3] shadow-md';
+  }
+
+  if (routeItem.is_recommended) {
+    return 'bg-green-50 border-green-200 hover:border-green-300 hover:shadow-md';
+  }
+
+  return 'bg-white border-gray-100 hover:border-[#0693E3]/40 hover:shadow-md';
+}
+
 async function startDemoMovement() {
   etaError.value = '';
   showDriverArrivedPopup.value = false;
@@ -1429,6 +2258,7 @@ async function moveDriverAlongRoute() {
   lastUpdate.value = `${formatTime(new Date())} (driver moving)`;
 
   await fetchAiEta();
+  await fetchRouteDeviation();
 
   const nextIndex = currentIndex + Math.max(1, Math.ceil(totalPoints / 12));
   demoCurrentPointIndex.value = nextIndex;
@@ -1437,6 +2267,7 @@ async function moveDriverAlongRoute() {
     safeSetDriverLocation(pickupLat.value, pickupLng.value, 'arrived_pickup');
 
     await fetchAiEta();
+    await fetchRouteDeviation();
 
     stopDemoMovement();
 
@@ -1469,6 +2300,7 @@ onMounted(async () => {
     await syncOfflineLocations();
     await fetchLatestLocation();
     await fetchAiEta();
+    await fetchRouteOptimization();
   } else {
     handleOffline();
   }
@@ -1480,6 +2312,12 @@ onMounted(async () => {
       if (!demoMoving.value) {
         await fetchLatestLocation();
         await fetchAiEta();
+
+if (!routeOptions.value.length) {
+  await fetchRouteOptimization();
+} else {
+  await fetchRouteDeviation();
+}
       }
     } else {
       handleOffline();
@@ -1491,11 +2329,18 @@ onMounted(async () => {
       await fetchAiEta();
     }
   }, 30000);
+
+  routeDeviationInterval = setInterval(async () => {
+  if (navigator.onLine && !demoMoving.value && activeRoutePolyline.value) {
+  await fetchRouteDeviation();
+}
+  }, 15000);
 });
 
 onBeforeUnmount(() => {
   if (trackingInterval) clearInterval(trackingInterval);
   if (etaInterval) clearInterval(etaInterval);
+  if (routeDeviationInterval) clearInterval(routeDeviationInterval);
   if (demoInterval) clearInterval(demoInterval);
 
   stopOfflineGpsTracking();
