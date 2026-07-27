@@ -13,13 +13,7 @@
         Don’t worry. We provide very nice deals and the most competative price
         just for you!
       </p>
-      <NuxtLink
-        to="/rates"
-        class="bg-[#3D3D3D] ml-auto px-7 py-5 h-full gap-4 items-center flex"
-      >
-        <span> Check Rates </span>
-        <iconGoArrow class="w-5" />
-      </NuxtLink>
+    npm  -->
     </div>
     <div
       class="mt-10 md:mt-20 px-3 justify-center flex flex-col items-center gap-3"
